@@ -1,0 +1,971 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{tikz}
+
+\newcommand{\bx}[1]{#1$\times$#1}
+\newcommand{\pending}[1]{\noindent\fcolorbox{gray}{gray!8}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small\textbf{Status: training in progress.} #1}}}
+\newcommand{\flag}[1]{\noindent\fcolorbox{red!60!black}{red!5}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small #1}}}
+
+\input{report/tables/tuning_meta.tex}
+\input{report/tables/tests_meta.tex}
+\input{report/tables/classical_meta.tex}
+\makeatletter
+\newcommand{\tabinput}[1]{\@@input #1 }
+\makeatother
+
+% ---- Othello board diagrams -------------------------------------------
+% \othboard{black discs}{white discs}{legal-move marks}{ringed squares}
+% Each list is col/row pairs (1-based, col 1 = a, row 1 = top); use {} for none.
+\definecolor{felt}{HTML}{2E7D4F}
+\newcommand{\othboard}[4]{%
+\begin{tikzpicture}[scale=0.5]
+  \fill[felt] (0,0) rectangle (6,-6);
+  \foreach \i in {0,...,6} {\draw[black!60] (\i,0) -- (\i,-6); \draw[black!60] (0,-\i) -- (6,-\i);}
+  \foreach \l [count=\i] in {a,b,c,d,e,f} \node[font=\scriptsize] at (\i-0.5,0.45) {\l};
+  \foreach \i in {1,...,6} \node[font=\scriptsize] at (-0.45,-\i+0.5) {\i};
+  \def\lst{#1}\ifx\lst\empty\else\foreach \c/\r in {#1} \fill[black] (\c-0.5,-\r+0.5) circle (0.38);\fi
+  \def\lst{#2}\ifx\lst\empty\else\foreach \c/\r in {#2} {\fill[white] (\c-0.5,-\r+0.5) circle (0.38); \draw[black!70] (\c-0.5,-\r+0.5) circle (0.38);}\fi
+  \def\lst{#3}\ifx\lst\empty\else\foreach \c/\r in {#3} \fill[yellow!80!orange] (\c-0.5,-\r+0.5) circle (0.17);\fi
+  \def\lst{#4}\ifx\lst\empty\else\foreach \c/\r in {#4} \draw[red!80!black, very thick] (\c-0.5,-\r+0.5) circle (0.46);\fi
+\end{tikzpicture}}
+
+\title{Learning to Play Othello:\\Rule-Based Bots, Classical Reinforcement Learning and Beyond}
+\author{Palak Raisinghani}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Othello has simple rules, but its strategy is deep and often counter-intuitive. Moves that bring high immediate rewards can prove to be harmful later, and moves that seem to be of no great immediate value can prove extremely beneficial later on in the game. Othello is thus a strong benchmark to prove capabilty in learning delayed rewards.
+This project tests several different Rule Based and RL models on their ability to learn how to play Othello. Finally we develop a solid model for the game and offer an attractive interface to play the game against our RL-build Model that we call \textit{Oroletto}.
+
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{The Game of Othello}
+\label{sec:game}
+
+\subsection{Board and pieces}
+Othello is a two-player, perfect-information game played on a square board,
+classically \bx{8}. The pieces are discs that are black on one side and white on
+the other. The game starts with four discs on the four centre squares, placed
+diagonally. Black moves first. We name squares by column letter and row number,
+so on \bx{6} the corners are a1, f1, a6 and f6 (Fig.~\ref{fig:rules}a). The rules
+do not depend on the board size, and this project uses \bx{6}, \bx{8} and
+\bx{10}.
+
+\subsection{Rules}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Placing and capturing.} On your turn you place one disc of your
+        colour on an empty square. The placement is legal only if it
+        \emph{sandwiches} at least one straight, unbroken line of opponent discs
+        between the new disc and another of your discs. Lines run horizontally,
+        vertically or diagonally. Every sandwiched disc, in every direction at
+        once, is flipped to your colour (Fig.~\ref{fig:rules}b).
+  \item \textbf{Passing.} A player with no legal placement must pass. Passing is
+        not allowed when a legal move exists.
+  \item \textbf{End of game.} The game ends when neither player can move,
+        usually because the board is full. The player with more discs wins, and
+        equal counts are a draw.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.45\linewidth}\centering
+  \othboard{4/3,3/4}{3/3,4/4}{3/2,2/3,5/4,4/5}{}
+  \caption{Start position. Dots: Black's legal moves.}
+\end{subfigure}\hfill
+\begin{subfigure}{0.45\linewidth}\centering
+  \othboard{4/3,3/4,3/2,3/3}{4/4}{}{3/2,3/3}
+  \caption{After Black plays c2. The white disc on c3 is sandwiched and flips.}
+\end{subfigure}
+\caption{The rules on a \bx{6} board. This is the same example as the
+interactive tutorial (\texttt{othello --tutorial}, \S\ref{sec:cli}).}
+\label{fig:rules}
+\end{figure}
+
+\subsection{Strategic concepts}
+\label{sec:concepts}
+Four ideas recur throughout this report. Each is defined here once.
+\begin{description}[leftmargin=1.2em,style=nextline]
+  \item[Stability and corners.] A disc is \emph{stable} if it can never be
+  flipped again. A corner disc is always stable, because no line can sandwich
+  it. A stable corner also lets the discs along its edges become stable.
+  \item[X- and C-squares.] The squares diagonally adjacent (X) and orthogonally
+  adjacent (C) to a corner. Playing there while the corner is empty tends to
+  give the corner to the opponent.
+  \item[Mobility.] The number of legal moves a player has. Keeping your own
+  mobility high and the opponent's low eventually forces the opponent onto
+  X- and C-squares.
+  \item[The disc-count trap.] Owning many discs in the middle game is usually a
+  \emph{weakness}. It flips discs the opponent can flip back, and it gives the
+  opponent more moves. Only the final count matters, so maximising discs early
+  is a classic beginner's error. This error turns out to matter for learning
+  agents as well.
+\end{description}
+
+\subsection{Board size and solved results}
+\bx{8} Othello has roughly $10^{28}$ legal positions and a game tree of about
+$10^{58}$ \cite{allis1994}. It was only recently weakly solved, as a draw under
+perfect play \cite{takizawa2023}. The \bx{6} game was solved much earlier: it is a
+win for the second player (White), 16--20 \cite{feinstein1993}. We start on \bx{6}
+because games are short and simulation is cheap. The board is still far too
+large to enumerate, so it remains a real learning problem.
+
+%======================================================================
+\section{Why Reinforcement Learning for Games}
+\label{sec:whyrl}
+
+\subsection{Games as reinforcement-learning problems}
+Reinforcement learning studies agents that learn to act by trial and error, in
+order to maximise a cumulative reward \cite{sutton2018}. A board game fits this
+framework exactly. The \emph{state} is the position, the \emph{actions} are the
+legal moves, the \emph{reward} is $+1/0/-1$ for a win, draw or loss at the end of
+the game, and the opponent is part of the environment. Board games offer two
+things that real-world RL problems rarely do:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{A perfect, free simulator.} Rules are exact and games can be
+        replayed millions of times, so data is limited only by compute.
+  \item \textbf{Self-play.} An agent can play against copies of itself. It then
+        always faces an opponent of its own strength, which produces an
+        automatic curriculum without human data.
+\end{itemize}
+Games are also hard in a way that makes them useful benchmarks. The reward is
+\emph{sparse} and \emph{delayed}: a single number after dozens of moves. The
+learner must therefore solve the \emph{credit-assignment problem}, which is
+working out which earlier moves caused the result. State spaces are also far too
+large to tabulate, so the agent has to \emph{generalise} from positions it has
+seen to positions it has not.
+
+\subsection{Landmark game-playing systems}
+
+\begin{table}[H]
+\centering
+\caption{Landmark game-playing systems. Not all of them use RL; Deep Blue is
+included as the classic \emph{search-only} contrast.}
+\label{tab:landmarks}
+\small
+\begin{tabularx}{\linewidth}{@{}llrX@{}}
+\toprule
+Game & System & Year & Core idea \\
+\midrule
+Checkers & Samuel's player \cite{samuel1959} & 1959 & Learned a linear evaluation by comparing it with deeper search; an early ancestor of temporal-difference learning. \\
+Othello & IAGO \cite{rosenbloom1982} & 1982 & Hand-built evaluation that introduced mobility as a central concept. \\
+Backgammon & TD-Gammon \cite{tesauro1995} & 1995 & A neural network trained by TD($\lambda$) through self-play; reached top human level. \\
+Othello & Logistello \cite{buro1995,buro1997} & 1997 & Evaluation fitted by regression on pattern features from self-play games; beat the world champion 6--0. \\
+Chess & Deep Blue \cite{campbell2002} & 1997 & Massive alpha-beta search with a hand-tuned evaluation; no learning. Beat Kasparov. \\
+Atari & DQN \cite{mnih2015} & 2015 & Deep Q-learning from pixels, using experience replay and a target network. \\
+Go & AlphaGo \cite{silver2016} & 2016 & Policy and value networks (supervised, then RL) guiding Monte Carlo tree search. \\
+Go & AlphaGo Zero \cite{silver2017} & 2017 & Pure self-play from random play, with a single residual network plus MCTS. \\
+Chess, shogi, Go & AlphaZero \cite{silver2018} & 2018 & The same algorithm and settings master all three games. \\
+Dota 2 & OpenAI Five \cite{berner2019} & 2019 & Large-scale PPO self-play in a team game with hidden information. \\
+StarCraft II & AlphaStar \cite{vinyals2019} & 2019 & Multi-agent RL with a league of past and exploiter agents. \\
+Atari, board games & MuZero \cite{schrittwieser2020} & 2020 & AlphaZero-style planning with a \emph{learned} model of the rules. \\
+Othello & Othello-GPT \cite{li2023} & 2023 & A sequence model trained on move lists forms an internal board representation. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Table~\ref{tab:landmarks} shows a clear trajectory. Early systems learned only
+the \emph{weights} of hand-designed features (Samuel, Logistello). TD-Gammon
+showed that a neural network could learn its own features from self-play. The
+AlphaGo line then combined learned networks with \emph{search}: the network
+supplies intuition about which moves are promising and how good a position is,
+and tree search corrects the network's mistakes by looking ahead. Deep Blue is a
+reminder that search alone, with expert-tuned evaluation, is already very strong.
+This is why our ladder of rule-based bots (\S\ref{sec:bots}) includes a search
+bot.
+
+\subsection{Why Othello}
+Othello sits at a useful point between toy problems and grand challenges. The
+rules fit in three lines, but the state space is far beyond a lookup table even
+on \bx{6}. Its strategy is also counter-intuitive: the disc-count trap
+(\S\ref{sec:concepts}) means the obvious objective is the wrong one. This tests
+whether a learner discovers the real structure of the game or only the surface
+statistic. Finally, its small boards are solved, which gives ground truth that
+large games like Go do not have.
+
+%======================================================================
+\section{Rule-Based Bots}
+\label{sec:bots}
+
+Every learning method is judged against fixed, rule-based opponents, so their
+strength must be known and stable. We built three, of increasing strength: a
+random bot, a one-ply heuristic bot and an alpha-beta minimax bot. All results
+in this section use the shared evaluation protocol summarised below and
+detailed in \S\ref{sec:protocol}.
+
+\paragraph{Evaluation protocol (summary).} Every match is played from $K$
+openings of six random plies, and each opening is played once with each colour.
+We report the \emph{score} (win $=1$, draw $=\tfrac12$) with a 95\% confidence
+interval, the win rate and the mean final disc margin.
+
+\subsection{The random bot}
+The random bot plays a uniformly random legal move. It is the floor of the
+ladder: any agent that has learned anything should beat it clearly. It also
+calibrates the game itself. Under random play the first mover scores slightly
+below half on every board size (Table~\ref{tab:throughput}), so evaluations
+must alternate colours.
+
+\subsection{The heuristic bot}
+The heuristic bot is \emph{greedy}. For each legal move it evaluates the
+resulting position with a hand-written evaluation function and plays the
+best-scoring move. It looks exactly one ply ahead. The same evaluation, with
+different weights, also gives the ``disc-count-greedy'' bot used during tuning
+(all weight on discs), which is the \emph{easy} level of the terminal game.
+
+\subsubsection{Evaluation function}
+
+The evaluation is a weighted sum of four features. Each is computed as
+``own minus opponent'' and is defined for any board size:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Disc count}: material on the board.
+  \item \textbf{Mobility}: the number of legal moves available. High mobility
+        means many options. Low opponent mobility forces the opponent into
+        bad squares.
+  \item \textbf{Corners}: corner discs can never be flipped. They are
+        \emph{stable} and anchor the stable discs along their edges.
+  \item \textbf{X-squares}: discs diagonally adjacent to an \emph{empty}
+        corner. Such a disc typically hands that corner to the opponent, so
+        its weight is non-positive.
+\end{itemize}
+The heuristic bot breaks ties at random and plays a uniformly random move with
+probability $\varepsilon{=}0.05$. It is therefore not one deterministic line that
+a tabular learner could memorise and exploit. Exploitability of that kind would
+give the learner a misleadingly high win rate.
+
+\subsubsection{Tuning the weights}
+
+\begin{table}[H]
+\centering
+\caption{Grid search over heuristic weights on \bx{6} (\NumCandidates{}
+candidates, 400 games per opponent, $\pm$95\% CI $\approx$ 4--5 points per
+cell). Scores (\%) against a disc-count-greedy bot, the untuned hand default
+and the random bot. Middle block: the selected weights with one feature
+removed. Bold: best shown per column.}
+\label{tab:tuning}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+& \multicolumn{4}{c}{Weights} & \multicolumn{4}{c}{Score vs.\ (\%)} \\
+\cmidrule(lr){2-5}\cmidrule(l){6-9}
+Configuration & disc & mob. & corner & X-sq. & disc-greedy & hand def. & random & mean \\
+\midrule
+\tabinput{report/tables/tuning.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:tuning} gives a clear ranking of feature importance. Corner
+occupancy dominates. Removing it hurts far more than removing any other feature
+and leaves a bot close to the disc-only player. Corners matter so much because
+of \emph{stability}: a corner disc is permanent, and it lets the adjacent edge
+discs become permanent too. An evaluation that ignores corners optimises
+quantities that the opponent can reverse in one move.
+
+Mobility is the second most important feature. Removing it hurts most against
+the hand-default bot, the opponent that itself values corners and mobility.
+We attribute this to mobility's \emph{tempo} role. Restricting the opponent's
+options eventually forces them onto X- and C-squares that give up corners. This
+effect matters most against an opponent that already guards the corners, while
+weak opponents give corners away even without that pressure.
+
+The disc-count weight barely matters, and the disc-only bot is the weakest
+configuration in the table, barely better than random. This is the classical
+\emph{disc-count trap}. Grabbing material mid-game flips many discs that the
+opponent can flip back, and it increases the opponent's mobility. This result
+motivates the disc-count ablation for linear function approximation in
+\S\ref{sec:classical}.
+
+The X-square penalty gives a smaller but consistent gain against the
+hand-default bot. That fits its role of refining corner play, since it only
+matters when the opponent is able to take corners.
+
+\flag{\textbf{Caveat.} The top five configurations differ by less than the
+per-cell confidence interval. The ranking within that group is therefore
+noise-level. Selecting the best of \NumCandidates{} noisy candidates also
+inflates the selected configuration's score (a winner's-curse bias). The
+selected weights are a sound reference opponent but not a provably optimal
+one.}
+
+\subsection{The minimax bot}
+The minimax bot adds \emph{lookahead}. It searches the game tree $d$ plies deep,
+assuming both sides play their best, and scores the leaves with the tuned
+heuristic evaluation (or the exact result at the end of the game). Alpha-beta
+pruning \cite{knuth1975} skips branches that cannot change the decision.
+Ordering moves statically (corners first, X- and C-squares last) makes the
+pruning more effective. Ties at the root are broken at random.
+
+\subsubsection{Choosing the search depth}
+
+\begin{table}[H]
+\centering
+\caption{Alpha-beta minimax at depth $d$ against the heuristic bot on \bx{6}
+(200 paired openings = 400 games). Nodes per move and time per game were
+measured on 10 separate games. EBF: the ratio of nodes at depth $d$ to nodes at
+$d{-}1$ (effective branching factor). Bold: best score.}
+\label{tab:depth}
+\begin{tabular}{@{}rlcrrrr@{}}
+\toprule
+$d$ & Score (\%) & W/D/L & Margin & Nodes/move & EBF & ms/game \\
+\midrule
+\tabinput{report/tables/minimax_depth.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\linewidth]{report/figures/minimax_depth.pdf}
+\caption{Strength vs.\ search cost for minimax depths 1--5 on \bx{6}. Error bars:
+95\% CI.}
+\label{fig:depth}
+\end{figure}
+
+Table~\ref{tab:depth} and Fig.~\ref{fig:depth} show strength rising
+monotonically with depth, with clearly diminishing returns per node. The first
+two extra plies give most of the gain, and later plies each cost several times
+more search for a smaller improvement. Depth~1 is a useful internal check. A
+one-ply search with the same evaluation \emph{is} the greedy heuristic bot. It
+scores only slightly above parity, and we attribute the residual edge to the
+opponent's $\varepsilon$-random moves.
+
+We attribute the early gains to the \emph{horizon effect}: an evaluation is
+blind to consequences that fall just beyond its search depth. A greedy bot
+cannot see that a move gives the opponent a corner on the very next turn, and a
+two- or three-ply search can. Once that blunder class is covered, extra depth
+only refines decisions that the evaluation already ranks reasonably, and the
+gains flatten.
+
+The effective branching factor alternates between larger and smaller values from
+one depth to the next rather than staying constant. We hypothesise this is
+alpha-beta's \emph{odd-even effect}: pruning efficiency differs depending on
+whether the last ply belongs to the searching side or its opponent. We have not
+verified this with a separate experiment.
+
+We keep \textbf{depth 4} as the reference minimax. It sits after the steep part
+of the curve, and depth~5 costs several times more per game. This matters
+because minimax will be evaluated thousands of times during RL training.
+
+\subsection{Head-to-head comparison}
+\label{sec:bots_compare}
+
+The opponents must form a clear strength ladder before any RL result can be
+interpreted. We originally required that heuristic beat random in at least 95\%
+of games and that minimax-d4 beat heuristic in at least 80\%. The full round
+robin was played on all three board sizes with the weights tuned on \bx{6}.
+
+The minimax criterion passed easily at every size. The heuristic criterion
+\emph{failed at every size}. On \bx{6} the 95\% confidence interval lies wholly
+below the bar, so this was a real shortfall, not sampling noise. The two
+diagnostics below look for the cause. The resulting, revised gate is
+reported in Table~\ref{tab:gate}.
+
+\begin{table}[H]
+\centering
+\caption{Diagnostic: win rate (\%) and mean disc margin against the random bot
+for variants of the heuristic bot (6-ply random openings).}
+\label{tab:diag}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{\bx{6} (1000 games)} & \multicolumn{2}{c}{\bx{8} (400 games)} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Agent & Win & Margin & Win & Margin \\
+\midrule
+\tabinput{report/tables/gate_diag.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Diagnostic: heuristic vs.\ random on \bx{6} as a function of the number
+of random opening plies (1000 games per row). ``Distinct'' counts the unique
+openings among the 500 generated.}
+\label{tab:openings}
+\begin{tabular}{@{}rrrlrl@{}}
+\toprule
+& & \multicolumn{2}{c}{$\varepsilon=0.05$} & \multicolumn{2}{c}{$\varepsilon=0$} \\
+\cmidrule(lr){3-4}\cmidrule(l){5-6}
+Opening plies & Distinct & Win (\%) & Score (\%) & Win (\%) & Score (\%) \\
+\midrule
+\tabinput{report/tables/gate_openings.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+We tested three candidate causes.
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Exploration noise.} Removing the $\varepsilon$-random moves
+        helps only slightly (Tables~\ref{tab:diag} and~\ref{tab:openings}), so
+        it is not the main cause. As expected, the greedy bot and minimax-d1
+        perform the same, a second consistency check on the search code.
+  \item \textbf{Opening luck.} A \bx{6} game lasts only about two dozen plies
+        (Table~\ref{tab:throughput}), so six random opening plies are a
+        substantial fraction of it. Table~\ref{tab:openings} supports this
+        \emph{partially}. Fewer random plies raise the win rate, but only
+        modestly, and the rate stays below 95\% even from the plain start
+        position. Short openings also collapse diversity: two plies give only
+        about a dozen distinct openings.
+  \item \textbf{Myopia (horizon effect).} This is the remaining and, we infer,
+        dominant cause. A one-ply evaluation cannot see the opponent's reply,
+        so even a random opponent is sometimes handed a corner. Lookahead is the
+        only change that substantially closes the gap: depth~2 nearly reaches
+        the bar on \bx{6} and clears it comfortably on \bx{8}
+        (Table~\ref{tab:diag}).
+\end{enumerate}
+\bx{6} has the largest gap of the three sizes. We attribute this to the short
+game, which limits the number of decisions in which the better player can pull
+ahead.
+
+\paragraph{Resolution.} A greedy one-ply bot cannot reliably reach 95\% against
+random on \bx{6}. The 95\% bar was a prior guess, not a property of the game.
+We therefore revised the heuristic criterion to a \textbf{score of at least
+90\%} (draws count half). For consistency the minimax criterion is also stated
+on score. We kept the 6-ply openings because evaluation diversity matters more
+to the later studies than a few points of heuristic strength. We rejected
+replacing the heuristic bot with minimax-d2. A weaker-but-solid training
+opponent leaves more headroom for the learning curves in
+\S\ref{sec:classical}, and minimax-d4 already provides the strong reference.
+
+\flag{\textbf{This threshold was chosen after seeing the data.} On \bx{6} the
+heuristic bot clears the revised bar on score only narrowly. Its raw win rate
+is just below 90\%, because draws are frequent on the small board. Read the
+heuristic--random gap as ``clear and stable'', not ``overwhelming''.}
+
+\begin{table}[H]
+\centering
+\caption{Round robin between the reference opponents. Wins/draws/losses,
+win rate and score are from the first-named agent's perspective. Games $=2\times$
+openings. Gate: the revised threshold on \emph{score} and its outcome.}
+\label{tab:gate}
+\small
+\begin{tabular}{@{}llrcrlrl@{}}
+\toprule
+Board & Match-up & Games & W/D/L & Win (\%) & Score (\%) & Margin & Gate \\
+\midrule
+\tabinput{report/tables/gate.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Bradley--Terry Elo fitted to each size's round robin (random $=0$).
+Near-perfect scores make the larger gaps poorly determined; a weak prior keeps
+them finite.}
+\label{tab:elo}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Board & random & heuristic & minimax-d4 \\
+\midrule
+\tabinput{report/tables/elo.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tables~\ref{tab:gate} and~\ref{tab:elo} confirm the intended ordering
+random $<$ heuristic $<$ minimax on every board size. The gap between minimax
+and heuristic widens as the board grows. We attribute this to two effects.
+Larger boards mean longer games with more decisions, so lookahead has more
+chances to pay off. And the weights were tuned on \bx{6}, which likely suits the
+greedy bot less on bigger boards, while search partly makes up for a mis-tuned
+evaluation.
+
+%======================================================================
+\section{Traditional Training Methods}
+\label{sec:classical}
+
+This section trains five classical RL methods on \bx{6}. All of them use the
+same fixed opponent and the same budget, and each is then compared against all
+three rule-based bots. The question is not only how well each method plays, but
+\emph{why} it stops improving where it does.
+
+\subsection{Common setup}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Opponent and episodes.} Each learner plays the heuristic bot
+        (\S\ref{sec:bots}), alternating colours and starting from random
+        6-ply openings, for \TrainGames{} training games per run, with 3 seeds
+        per method.
+  \item \textbf{The learner's view.} The learner sees only its own decision
+        points. Its state $s_t$ is the position when it is to move, and the
+        opponent's reply is part of the environment's transition to $s_{t+1}$.
+        The reward is $+1$, $0$ or $-1$ at the end of the game and zero
+        otherwise, with no discounting ($\gamma=1$).
+  \item \textbf{Exploration.} $\varepsilon$-greedy, with $\varepsilon$ decaying
+        linearly from 0.3 to 0.05 over the first half of training.
+  \item \textbf{Evaluation.} Every 5{,}000 games the greedy policy plays 200
+        evaluation games against the heuristic bot (for the learning curves).
+        At the end it plays 1{,}000 games against random and against heuristic,
+        and 500 against minimax-d4 (for the comparison). The evaluation
+        openings are fixed and shared across methods.
+\end{itemize}
+
+\subsection{The methods}
+
+\paragraph{Tabular Q-learning \cite{watkins1992}.} Keeps a table entry $Q(s,a)$
+for every state--action pair it has visited and updates it toward a bootstrapped
+one-step target:
+\[
+  Q(s_t,a_t) \leftarrow Q(s_t,a_t) + \alpha\big[r_{t+1} + \gamma \max_{a'} Q(s_{t+1},a') - Q(s_t,a_t)\big].
+\]
+The $\max$ makes it \emph{off-policy}: it learns the value of the greedy policy
+while it behaves $\varepsilon$-greedily. To give the table its best chance, each
+position is stored in a canonical form under the 8 symmetries of the board, so
+symmetric positions share one entry. Unvisited entries read as 0.
+
+\paragraph{SARSA \cite{rummery1994}.} Identical to Q-learning except that the
+target uses the action $a_{t+1}$ the agent \emph{actually} took next, i.e.
+$r_{t+1} + \gamma Q(s_{t+1},a_{t+1})$. It is therefore \emph{on-policy}: it values
+the exploring policy itself, including its exploratory mistakes.
+
+\paragraph{First-visit Monte Carlo control \cite{sutton2018}.} Does not
+bootstrap. After the game ends, every visited pair is moved toward the observed
+return $G_t$ (here the final result) by a sample average,
+$Q(s,a)\leftarrow Q(s,a) + \tfrac{1}{N(s,a)}\,[G_t - Q(s,a)]$. Its targets are
+unbiased but have high \emph{variance}: each one is a single noisy game outcome
+that depends on every later move by both players. (Positions never repeat within
+an Othello game, so first-visit and every-visit MC coincide.)
+
+\paragraph{Linear function-approximation Q-learning.} Replaces the table with a
+weighted sum of features, $Q(s,a)=\mathbf{w}^{\top}\boldsymbol{\phi}(s\!\oplus\!a)$,
+where $s\!\oplus\!a$ is the \emph{afterstate}: the position right after the
+learner's move. The features are disc difference, mobility difference, corner
+difference, X-square difference, stable-edge-disc difference and a bias, each
+scaled to roughly unit range. The weights are learned by semi-gradient
+Q-learning, $\mathbf{w} \leftarrow \mathbf{w} + \alpha\,\delta_t\,\boldsymbol{\phi}$.
+Unlike a table, it \emph{generalises}: every position with similar features gets a
+similar value, even if it has never been seen. But it can only represent
+evaluations that are linear in those features.
+
+\paragraph{Vanilla DQN \cite{mnih2015}.} Replaces the table with a neural network
+$Q_\theta$: an MLP with two hidden layers of 256 units over three input planes
+(own discs, opponent discs, legal moves). It outputs one value per square plus
+pass. Two components stabilise training:
+an \emph{experience-replay} buffer (200k transitions, sampled uniformly), which
+breaks the correlation between consecutive positions, and a \emph{target
+network} $Q_{\theta^-}$, synced every 2{,}000 updates, which keeps the bootstrap
+target from chasing itself. The loss is
+$\mathrm{Huber}\big(Q_\theta(s,a) - [r + \gamma\max_{a'\,\text{legal}} Q_{\theta^-}(s',a')]\big)$.
+Illegal actions are masked both when acting and in the max. Unlike the linear
+model, the network can learn its own features from raw discs.
+
+\paragraph{Disc-count ablation (linear FA).} To test the disc-count trap
+(\S\ref{sec:concepts}) on a learner, the linear method is trained three more
+ways: without the disc feature, with \emph{only} the disc feature (plus bias),
+and with the full feature set but rewarded by the final \emph{disc margin}
+instead of win/loss.
+
+\subsection{Results}
+\label{sec:classical_results}
+\subsubsection{Comparison against the three rule-based bots}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/classical_bars.pdf}
+\caption{Final score of each traditional method against the three rule-based
+bots on \bx{6}. Bars: mean over 3 seeds; whiskers: min--max across seeds; dotted
+line: 50\% (parity). Against random and heuristic each bar is 1{,}000 games per
+seed; against minimax-d4 it is 500.}
+\label{fig:classical_bars}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Final evaluation of the traditional methods (mean $\pm$ std over
+seeds, \%). ``Win vs heur.'' is the raw win rate against the training opponent.
+``Train'' is the wall-clock hours per run on one CPU core. The reference row is
+the heuristic bot's own result from the rule-based round robin
+(Table~\ref{tab:gate}). Bold: best per column.}
+\label{tab:classical}
+\small
+\begin{tabular}{@{}lcllllr@{}}
+\toprule
+& & \multicolumn{3}{c}{Score vs.\ (\%)} & & \\
+\cmidrule(lr){3-5}
+Method & Seeds & random & heuristic & minimax-d4 & Win vs heur. & Train (h) \\
+\midrule
+\tabinput{report/tables/classical.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:classical_bars} and Table~\ref{tab:classical} separate the
+methods into three tiers. The tabular TD methods (Q-learning and SARSA) never
+leave random play: they draw level with the random bot and lose almost every game
+to the other two. Linear function approximation reaches the strength of the
+heuristic bot: it scores about as well as the heuristic does against random,
+breaks even against the heuristic, and loses to minimax-d4 by a similar margin.
+DQN is the strongest method on \emph{all three} opponents, and is the only one
+that clearly beats its training opponent while still dominating random play.
+
+Monte Carlo control does not fit this ordering. It beats the heuristic bot it was
+trained against, yet against the \emph{random} bot it does no better than a coin
+flip. A policy that had learned to play Othello would find the random bot the
+easiest of the three opponents. MC control instead does well only against the
+one opponent it has seen. We call this \emph{overfitting to the training
+opponent}: a policy that exploits the specific habits of one opponent instead of
+learning the game. Evaluating against the training opponent alone would have
+ranked MC control among the best methods. The three-bot comparison is what
+exposes it. No method comes close to minimax-d4. Every one of them chooses moves
+without lookahead, and none overcomes the horizon effect that already limited
+the one-ply heuristic bot (\S\ref{sec:bots}).
+
+\subsubsection{Learning dynamics}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/classical_curves.pdf}
+\caption{Learning curves: greedy-policy score against the heuristic bot (200
+games per point) during training. Lines: mean over 3 seeds; bands: min--max.
+Q-learning and SARSA overlap almost exactly.}
+\label{fig:classical_curves}
+\end{figure}
+
+The curves in Fig.~\ref{fig:classical_curves} show three different failure modes.
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Flat at the bottom (Q-learning, SARSA).} No measurable
+        improvement over the whole budget.
+  \item \textbf{Immediate plateau (linear FA).} Reaches parity within the first
+        evaluation interval and then does not move. Additional data does not
+        help.
+  \item \textbf{Slow, steady climb (MC control, DQN).} Both are still rising
+        at the end of the budget, MC control from a much lower start.
+\end{itemize}
+
+\subsubsection{Why the tabular methods fail}
+
+\begin{table}[H]
+\centering
+\caption{Tabular diagnostics at the end of training (mean over 3 seeds).
+Coverage is the fraction of the learner's decision positions during the final
+evaluation games that already have an entry in its table. Update-error variance
+is the variance of $(\text{target} - Q)$ over the updates of the first and of the
+last 5{,}000 training games.}
+\label{tab:tabular}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+& & \multicolumn{2}{c}{Coverage (\%)} & \multicolumn{2}{c}{Update-error var.} \\
+\cmidrule(lr){3-4}\cmidrule(l){5-6}
+Method & States ($10^6$) & vs heuristic & vs random & first 5k & last 5k \\
+\midrule
+\tabinput{report/tables/classical_tabular.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{The curse of dimensionality.} Table~\ref{tab:tabular} shows the
+mechanism directly. After \TrainGames{} games each table holds between one and two million
+canonical positions, yet in games against the random bot fewer than one in ten
+of the positions the learner meets are in its table. A lookup table has no notion of
+similarity between positions, so a position it has not seen is a position it
+knows nothing about, and it falls back to an arbitrary choice. This is the
+\emph{curse of dimensionality} in its plainest form: the number of reachable
+positions is so large that a table cannot be filled from any feasible amount of
+play. It is the same even after merging the 8 board symmetries. Coverage is
+markedly higher against the heuristic bot, because a mostly deterministic
+opponent keeps leading the game back into the same lines. That difference is
+what MC control exploits.
+
+\paragraph{Why Q-learning and SARSA are indistinguishable.} The two update rules
+differ only in which next-state entry they bootstrap from: the greedy one or the
+one actually taken. A unit test confirms they produce different targets when the
+next state's entries exist (\texttt{tests/test\_rl.py}). In practice the next
+state is usually unvisited, so both entries read the default value of zero, the
+two targets coincide and the learners behave the same. We attribute the TD
+methods' failure to
+\emph{bootstrapping} under sparse revisits. A one-step target $r+\gamma
+Q(s',\cdot)$ only carries information backwards one move per visit. The final
+reward therefore has to travel back through many revisits of the same line before
+it reaches early positions, and almost no line is revisited that often.
+
+\paragraph{Why MC control behaves differently.} MC control does not bootstrap.
+After every game it moves \emph{all} visited entries straight toward the actual
+outcome, so a single winning game against the heuristic bot marks every position
+on that line as good at once. Against a nearly deterministic opponent, starting
+from a bounded set of openings, the same lines come back often enough for these
+marks to accumulate. Its coverage against the heuristic bot rises together with
+its score. It is effectively memorising a growing book of winning lines against
+\emph{that one bot}. Coverage against the random bot stays low, which is why the
+memorised book is useless there. The price of not bootstrapping is
+\emph{variance}. Each MC target is a single, noisy game outcome, and its
+update-error variance is several times that of the TD methods. That variance is
+the bias--variance trade-off in action: unbiased targets, but slow and noisy
+progress, consistent with its slow climb in Fig.~\ref{fig:classical_curves}.
+
+\flag{\textbf{Design note.} We added the heuristic bot's $\varepsilon$-randomness
+and the random openings specifically to stop a tabular learner from memorising
+lines against it (\S\ref{sec:bots}). This was \emph{not sufficient}. MC control
+still found enough repetition to exploit. Any future result measured only
+against the training opponent should be treated with suspicion. The curve
+was still rising at the end of the budget, and we expect, but have not tested,
+that longer training would increase this exploitation without improving play
+against other opponents.}
+
+\subsubsection{Why linear function approximation plateaus}
+The linear learner \emph{generalises}: two positions with similar features get
+similar values whether or not either was seen. That is why it beats the random
+bot as convincingly as the heuristic bot does, after almost no training. But it
+reaches its ceiling almost immediately and stays there. Its features are
+essentially the heuristic bot's own features plus edge stability, so the best
+policy it can represent is a re-weighted one-ply heuristic. Learning finds those
+weights within a few thousand games, and the learned weights reproduce the
+ordering found by hand-tuning: corners first, then mobility, with disc count near
+zero (Table~\ref{tab:ablation}). This is a \emph{capacity} or
+\emph{inductive-bias} limit rather than a data limit. The model class itself
+contains nothing better than the heuristic, so more games cannot help.
+
+\subsubsection{Why DQN is the strongest, and still loses to search}
+DQN combines the two missing ingredients. It generalises across positions like
+the linear model, but it learns its own features from raw disc planes instead of
+being restricted to hand-chosen ones. Replay lets each game be learned from many
+times, and the target network keeps the bootstrapped targets stable while it
+does. The result is the only method that improves on the heuristic bot without
+losing generality. It still chooses each move from a single forward pass, with no
+lookahead. Minimax-d4 punishes exactly the tactical oversights a one-ply policy
+cannot see, which is why DQN loses heavily to it. Its curve is still rising, so a
+longer run would likely help somewhat. However, closing the gap to search is the
+job of the self-play and MCTS methods in \S\ref{sec:next}, not of more DQN
+training.
+
+\subsubsection{The disc-count ablation}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{report/figures/classical_ablation_bars.pdf}
+\caption{Disc-count ablation for linear function approximation. Same format as
+Fig.~\ref{fig:classical_bars}.}
+\label{fig:ablation}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Disc-count ablation (mean $\pm$ std over 3 seeds, \%), with the learned
+weights (mean over seeds) on the scaled disc, mobility and corner features.}
+\label{tab:ablation}
+\small
+\begin{tabular}{@{}llllrrr@{}}
+\toprule
+& \multicolumn{3}{c}{Score vs.\ (\%)} & \multicolumn{3}{c}{Learned weight} \\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+Variant & random & heuristic & minimax-d4 & disc & mob. & corner \\
+\midrule
+\tabinput{report/tables/classical_ablation.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Fig.~\ref{fig:ablation} and Table~\ref{tab:ablation} separate two versions of
+the disc-count trap.
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Disc-count \emph{features}: the trap is reproduced.} Removing
+        the disc feature changes nothing, and the full model learns to give it
+        essentially zero weight. A learner restricted to disc count \emph{only}
+        collapses to the strength of the disc-greedy bot from the tuning study,
+        barely above random. Disc count simply does not carry the information
+        needed to play well. The learner rediscovers what the rule-based
+        tuning found (\S\ref{sec:bots}).
+  \item \textbf{Disc-count \emph{reward}: no measurable harm.} Rewarding the
+        final disc margin instead of the win leaves strength unchanged on all
+        three opponents. This \emph{contradicts} the expectation in our original
+        plan. We attribute it to the features. With corner and mobility features
+        available, the positions that maximise the final margin are the same
+        ones that maximise the chance of winning, so the two objectives agree.
+        The learned weights only shrink in scale, as the smaller reward range
+        would predict, and keep their ordering. The trap lies in valuing discs
+        \emph{during} the game, which the features control, not in scoring them
+        at the \emph{end}, which is all the reward does.
+\end{itemize}
+
+%======================================================================
+\section{System Architecture}
+\label{sec:env}
+
+All experiments run on one Python code base (package \texttt{othello}). It has
+a size-parameterised environment, the bots, the learners, the evaluation
+harness, and a terminal front-end for human play.
+
+\subsection{Environment design}
+\label{sec:arch}
+
+The environment is shared by every experiment, and each part of it exists for
+a downstream need:
+
+\begin{description}[leftmargin=1.2em,style=nextline]
+  \item[Bitboard state.] A position is two integers of $n^2$ bits (one per
+  colour), plus the side to move and a consecutive-pass counter. Move
+  generation shifts the bitboards in the eight compass directions and masks out
+  bits that wrap around a row edge. Nothing depends on a fixed $n$, so \bx{6},
+  \bx{8} and \bx{10} run the same code. This is the precondition for the
+  size-generalisation study.
+  \item[Immutable states.] Applying a move returns a new state rather than
+  mutating the old one. Copying a position is therefore free, which tree
+  search (minimax now, MCTS later) relies on to hold many positions at once.
+  \item[Action space with an explicit pass.] Actions are the $n^2$ squares plus
+  one \emph{pass} action. Pass is legal only when no placement is. A fixed-size
+  action space with a legality mask lets learned policies mask illegal moves
+  rather than learn to avoid them.
+  \item[Configurable input planes.] The state can be encoded as any subset of
+  \{own discs, opponent discs, empty squares, side to move, legal moves\}.
+  The planned input-representation sweep (\S\ref{sec:next}) varies this set without
+  touching the environment.
+  \item[One agent interface.] Every player implements
+  \texttt{act(state)$\to$action}. Bots, learned policies and search agents
+  are therefore interchangeable in the evaluation harness.
+\end{description}
+
+\subsection{Evaluation protocol}
+\label{sec:protocol}
+All comparisons in this report use the same protocol. A fixed seed generates
+$K$ opening positions by playing six uniformly random plies from the standard
+start. Each opening is played twice with colours swapped, which cancels the
+\emph{first-move advantage}: the systematic edge (positive or negative) that
+comes from moving first rather than from playing well. Results are reported
+from the first agent's perspective as wins/draws/losses, \emph{score}
+(win $=1$, draw $=\tfrac12$) with a 95\% normal-approximation confidence
+interval, and mean final disc margin. The random openings keep a deterministic
+pair of agents from replaying one game $2K$ times. They also stop a learner from
+memorising a single line against a fixed opponent, which matters for the
+tabular methods in \S\ref{sec:classical}. Six plies give about 95\% distinct
+openings at $K{=}500$, against about 42\% for four plies. The normal-approximation
+interval degenerates (to zero width) when a score is exactly 0 or 1. Those
+cells should be read as ``no losses observed'', not as certainty.
+
+\subsection{Correctness validation}
+
+\begin{table}[H]
+\centering
+\caption{Environment correctness checks (\NumTests{} automated tests, all passing; see
+\texttt{results/baselines/pytest.txt}).}
+\label{tab:tests}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Check & What it guards against \\
+\midrule
+Perft, \bx{8}, depth 1--6 & Errors in move generation or flipping. Leaf counts must equal the published values 4, 12, 56, 244, 1396, 8200. \\
+Naive cross-check, $n\in\{4,6,8,10\}$ & Edge-wrapping errors at any board size. On 30 random games per size, the legal-move set and flipped discs must match an independent 2-D grid implementation at every ply. \\
+Forced pass / double pass & Wrong termination. A player with no move must pass; two consecutive passes end the game; a placement resets the pass counter. \\
+Full board, draw & Wrong winner attribution on equal disc counts. \\
+Transpose symmetry & Direction-specific shift bugs. Transposing the board must transpose the legal-move set. \\
+Encoding shapes & Plane-construction errors. Every plane configuration has shape $(C,n,n)$ with the expected disc and legal-move counts. \\
+Agents & Illegal moves from any bot; minimax missing a forced win; the heuristic bot ignoring a corner. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Perft (``performance test'') counts the leaf positions of the full game tree to
+a fixed depth. A single wrong flip or missed move changes the count, which makes
+it the most sensitive check of the move generator. Perft only exists for
+\bx{8}, so the naive cross-check carries the burden for the other sizes. It
+compares the bitboard engine with an independent implementation that shares no
+code with it, at every position of real games, including the board edges where
+wrap-around bugs would appear.
+
+\subsection{Simulator throughput}
+
+\begin{table}[H]
+\centering
+\caption{Single-core simulator throughput, random vs.\ random, 1000 paired
+openings per size. ``Black score'' is the share of points won by the first
+mover under uniformly random play.}
+\label{tab:throughput}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Board & Games & Games/s & Plies/s & Plies/game & Black score (\%) \\
+\midrule
+\tabinput{report/tables/throughput.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:throughput} shows games per second falling steeply with board
+size while plies per second fall only mildly. Almost all of the slowdown
+therefore comes from games getting longer: the number of plies grows roughly with
+the number of squares. Only a small part comes from each move costing more. Cost
+per ply grows slowly because each bitboard operation acts on all $n^2$ squares
+at once and the directional scans take $\mathcal{O}(n)$ steps. This tells us how
+to budget compute. Simulation will be negligible next to neural-network
+inference in the self-play studies, and going from \bx{6} to \bx{10} costs
+mainly through game length. The pure-Python engine is therefore sufficient, and
+a compiled engine is not needed yet.
+
+On every board size the first mover scores slightly below half under random
+play, so the side moving second has a small edge. This is \emph{consistent
+with} the known result that \bx{6} Othello is a second-player win under
+perfect play. Random play, however, says nothing about perfect play, so we
+read it only as a reason to keep evaluating with both colours.
+
+\subsection{Playing in the terminal}
+\label{sec:cli}
+The \texttt{othello} command lets a person play any agent in the terminal:
+\texttt{othello --play [1--5 | beginner \dots expert]} chooses a rule-based bot,
+\texttt{othello --model PATH} loads a trained model (linear or DQN), and
+\texttt{othello --tutorial} teaches the rules with the examples of
+Fig.~\ref{fig:rules} before a coached practice game. Options cover the board size
+(4--10), colour, legal-move hints and a coach mode that flags moves where the
+expert bot disagrees. The command reuses the same environment and agent classes as
+the experiments.
+
+%======================================================================
+\section{Next Steps}
+\label{sec:next}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Self-play learning.} Self-play PPO, Double DQN with an opponent
+        pool of past checkpoints, and an AlphaZero-style agent (residual
+        policy--value network, MCTS, symmetry augmentation) on \bx{6}. We
+        compare them on final strength, sample efficiency, wall-clock time and
+        stability across seeds, and check them against the solved \bx{6} result.
+  \item \textbf{Architecture and search-budget sweep.} Depth, width, input
+        planes, head design and MCTS simulations, varied one at a time and
+        summarised as a strength-versus-compute Pareto plot.
+  \item \textbf{Scaling to \bx{8}.} Re-tune the rule-based bots for \bx{8}
+        (Table~\ref{tab:gate} shows the \bx{6} weights are weaker there) and
+        train the selected configuration. Optionally, play matches against the
+        Edax engine.
+  \item \textbf{One network for every board size.} Test zero-shot transfer,
+        then train a fully convolutional, globally pooled network on mixed
+        board sizes and compare it with a small-to-large curriculum. The result
+        is reported as a train-size $\times$ test-size win-rate matrix.
+\end{itemize}
+
+%======================================================================
+\begin{thebibliography}{99}\small
+\bibitem{allis1994} L.~V. Allis. \emph{Searching for Solutions in Games and Artificial Intelligence}. PhD thesis, University of Limburg, 1994.
+\bibitem{berner2019} C.~Berner et al. Dota 2 with large scale deep reinforcement learning. arXiv:1912.06680, 2019.
+\bibitem{buro1995} M.~Buro. Statistical feature combination for the evaluation of game positions. \emph{Journal of Artificial Intelligence Research}, 3:373--382, 1995.
+\bibitem{buro1997} M.~Buro. The Othello match of the year: Takeshi Murakami vs.\ Logistello. \emph{ICCA Journal}, 20(3):189--193, 1997.
+\bibitem{campbell2002} M.~Campbell, A.~J. Hoane, and F.-h. Hsu. Deep Blue. \emph{Artificial Intelligence}, 134(1--2):57--83, 2002.
+\bibitem{feinstein1993} J.~Feinstein. Amenor wins world 6$\times$6 championships! \emph{British Othello Federation Newsletter}, July 1993.
+\bibitem{knuth1975} D.~E. Knuth and R.~W. Moore. An analysis of alpha-beta pruning. \emph{Artificial Intelligence}, 6(4):293--326, 1975.
+\bibitem{li2023} K.~Li, A.~K. Hopkins, D.~Bau, F.~Vi\'egas, H.~Pfister, and M.~Wattenberg. Emergent world representations: Exploring a sequence model trained on a synthetic task. In \emph{ICLR}, 2023.
+\bibitem{mnih2015} V.~Mnih et al. Human-level control through deep reinforcement learning. \emph{Nature}, 518:529--533, 2015.
+\bibitem{rosenbloom1982} P.~S. Rosenbloom. A world-championship-level Othello program. \emph{Artificial Intelligence}, 19(3):279--320, 1982.
+\bibitem{rummery1994} G.~A. Rummery and M.~Niranjan. On-line Q-learning using connectionist systems. Technical Report CUED/F-INFENG/TR 166, Cambridge University, 1994.
+\bibitem{samuel1959} A.~L. Samuel. Some studies in machine learning using the game of checkers. \emph{IBM Journal of Research and Development}, 3(3):210--229, 1959.
+\bibitem{schrittwieser2020} J.~Schrittwieser et al. Mastering Atari, Go, chess and shogi by planning with a learned model. \emph{Nature}, 588:604--609, 2020.
+\bibitem{silver2016} D.~Silver et al. Mastering the game of Go with deep neural networks and tree search. \emph{Nature}, 529:484--489, 2016.
+\bibitem{silver2017} D.~Silver et al. Mastering the game of Go without human knowledge. \emph{Nature}, 550:354--359, 2017.
+\bibitem{silver2018} D.~Silver et al. A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play. \emph{Science}, 362(6419):1140--1144, 2018.
+\bibitem{sutton2018} R.~S. Sutton and A.~G. Barto. \emph{Reinforcement Learning: An Introduction}. MIT Press, 2nd edition, 2018.
+\bibitem{takizawa2023} H.~Takizawa. Othello is solved. arXiv:2310.19387, 2023.
+\bibitem{tesauro1995} G.~Tesauro. Temporal difference learning and TD-Gammon. \emph{Communications of the ACM}, 38(3):58--68, 1995.
+\bibitem{vinyals2019} O.~Vinyals et al. Grandmaster level in StarCraft II using multi-agent reinforcement learning. \emph{Nature}, 575:350--354, 2019.
+\bibitem{watkins1992} C.~J. C.~H. Watkins and P.~Dayan. Q-learning. \emph{Machine Learning}, 8:279--292, 1992.
+\end{thebibliography}
+
+\end{document}

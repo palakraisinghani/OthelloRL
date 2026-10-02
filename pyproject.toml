@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "othello-rl"
+version = "0.1.0"
+description = "Othello environment, baselines and RL agents, playable from the terminal"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pyyaml"]
+
+[project.optional-dependencies]
+train = ["torch", "matplotlib", "pytest"]
+
+[project.scripts]
+othello = "othello.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["othello*"]

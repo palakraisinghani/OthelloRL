@@ -112,13 +112,45 @@ def gate(cfg):
     save_json(OUT / "gate.json", out)
 
 
+def diag(cfg):
+    """Why does the 1-ply heuristic miss the >=95% bar vs random on 6x6?"""
+    w, n_open = best_weights(), cfg["gate"]["sizes"][6]
+    rows = []
+    for label, spec in [
+        ("heuristic eps=0.05", {"type": "heuristic", "kwargs": {"weights": w, "epsilon": cfg["gate"]["heuristic_epsilon"]}}),
+        ("heuristic eps=0", {"type": "heuristic", "kwargs": {"weights": w}}),
+        ("minimax-d1", {"type": "minimax", "kwargs": {"depth": 1, "weights": w}}),
+        ("minimax-d2", {"type": "minimax", "kwargs": {"depth": 2, "weights": w}}),
+    ]:
+        for size in (6, 8):
+            r = play_match(size, spec, {"type": "random"}, n_open if size == 6 else 200,
+                           cfg["opening_plies"], cfg["seed"], cfg["workers"])
+            rows.append({"agent": label, "board_size": size, **r.summary()})
+            print(rows[-1])
+    save_json(OUT / "gate_diag.json", rows)
+
+
+def openings(cfg):
+    """Does opening length explain the heuristic-vs-random shortfall on 6x6?"""
+    w = best_weights()
+    rows = []
+    for eps in (cfg["gate"]["heuristic_epsilon"], 0.0):
+        for plies in (0, 2, 4, 6):
+            h = {"type": "heuristic", "kwargs": {"weights": w, "epsilon": eps}}
+            r = play_match(6, h, {"type": "random"}, cfg["gate"]["sizes"][6], plies, cfg["seed"], cfg["workers"])
+            distinct = len({tuple(o) for o in make_openings(OthelloEnv(6), cfg["gate"]["sizes"][6], plies, cfg["seed"])})
+            rows.append({"epsilon": eps, "opening_plies": plies, "distinct_openings": distinct, **r.summary()})
+            print(rows[-1])
+    save_json(OUT / "gate_openings.json", rows)
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("stage", choices=["throughput", "tune", "depth", "gate", "all"])
+    p.add_argument("stage", choices=["throughput", "tune", "depth", "gate", "diag", "openings", "all"])
     p.add_argument("--config", default="configs/baselines.yaml")
     a = p.parse_args()
     cfg = load_config(a.config)
-    stages = {"throughput": throughput, "tune": tune, "depth": depth_sweep, "gate": gate}
+    stages = {"throughput": throughput, "tune": tune, "depth": depth_sweep, "gate": gate, "diag": diag, "openings": openings}
     for name, fn in stages.items():
         if a.stage in (name, "all"):
             fn(cfg)

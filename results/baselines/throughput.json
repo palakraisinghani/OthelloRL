@@ -1,0 +1,26 @@
+[
+  {
+    "board_size": 6,
+    "games": 2000,
+    "games_per_sec": 2142.1992366478494,
+    "plies_per_sec": 56909.66492078677,
+    "mean_plies_per_game": 26.566,
+    "black_score_random": 0.46925
+  },
+  {
+    "board_size": 8,
+    "games": 2000,
+    "games_per_sec": 917.2084725638634,
+    "plies_per_sec": 49937.873892975826,
+    "mean_plies_per_game": 54.4455,
+    "black_score_random": 0.48025
+  },
+  {
+    "board_size": 10,
+    "games": 2000,
+    "games_per_sec": 449.31301815820404,
+    "plies_per_sec": 40596.77912964821,
+    "mean_plies_per_game": 90.353,
+    "black_score_random": 0.4775
+  }
+]

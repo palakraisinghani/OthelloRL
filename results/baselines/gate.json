@@ -1,0 +1,154 @@
+{
+  "weights": {
+    "disc": 1,
+    "mobility": 5,
+    "corner": 50,
+    "xsquare": -25
+  },
+  "sizes": {
+    "6": {
+      "matches": [
+        {
+          "a": "minimax-d4",
+          "b": "heuristic",
+          "games": 1000,
+          "wins": 870,
+          "draws": 10,
+          "losses": 120,
+          "win_rate": 0.87,
+          "score": 0.875,
+          "score_ci95": 0.02049817065008485,
+          "mean_margin": 17.231,
+          "seconds": 15.420279026031494
+        },
+        {
+          "a": "minimax-d4",
+          "b": "random",
+          "games": 1000,
+          "wins": 988,
+          "draws": 3,
+          "losses": 9,
+          "win_rate": 0.988,
+          "score": 0.9895,
+          "score_ci95": 0.006317694484541004,
+          "mean_margin": 24.056,
+          "seconds": 16.17541265487671
+        },
+        {
+          "a": "heuristic",
+          "b": "random",
+          "games": 1000,
+          "wins": 896,
+          "draws": 18,
+          "losses": 86,
+          "win_rate": 0.896,
+          "score": 0.905,
+          "score_ci95": 0.01817365015620142,
+          "mean_margin": 17.47,
+          "seconds": 0.7122325897216797
+        }
+      ],
+      "elo": {
+        "heuristic": 397.6432382601359,
+        "minimax-d4": 740.3690650507966,
+        "random": 0.0
+      }
+    },
+    "8": {
+      "matches": [
+        {
+          "a": "minimax-d4",
+          "b": "heuristic",
+          "games": 400,
+          "wins": 396,
+          "draws": 0,
+          "losses": 4,
+          "win_rate": 0.99,
+          "score": 0.99,
+          "score_ci95": 0.00975087688364488,
+          "mean_margin": 41.0675,
+          "seconds": 64.5339138507843
+        },
+        {
+          "a": "minimax-d4",
+          "b": "random",
+          "games": 400,
+          "wins": 400,
+          "draws": 0,
+          "losses": 0,
+          "win_rate": 1.0,
+          "score": 1.0,
+          "score_ci95": 9.799999999999999e-08,
+          "mean_margin": 43.8675,
+          "seconds": 62.42764711380005
+        },
+        {
+          "a": "heuristic",
+          "b": "random",
+          "games": 400,
+          "wins": 366,
+          "draws": 7,
+          "losses": 27,
+          "win_rate": 0.915,
+          "score": 0.92375,
+          "score_ci95": 0.026008974292539882,
+          "mean_margin": 29.3175,
+          "seconds": 1.189241886138916
+        }
+      ],
+      "elo": {
+        "heuristic": 432.6355156116771,
+        "minimax-d4": 1216.5606407831988,
+        "random": 0.0
+      }
+    },
+    "10": {
+      "matches": [
+        {
+          "a": "minimax-d4",
+          "b": "heuristic",
+          "games": 200,
+          "wins": 199,
+          "draws": 0,
+          "losses": 1,
+          "win_rate": 0.995,
+          "score": 0.995,
+          "score_ci95": 0.009775469298197406,
+          "mean_margin": 61.57,
+          "seconds": 146.04078793525696
+        },
+        {
+          "a": "minimax-d4",
+          "b": "random",
+          "games": 200,
+          "wins": 200,
+          "draws": 0,
+          "losses": 0,
+          "win_rate": 1.0,
+          "score": 1.0,
+          "score_ci95": 1.3859292911256333e-07,
+          "mean_margin": 68.56,
+          "seconds": 139.9900562763214
+        },
+        {
+          "a": "heuristic",
+          "b": "random",
+          "games": 200,
+          "wins": 186,
+          "draws": 0,
+          "losses": 14,
+          "win_rate": 0.93,
+          "score": 0.93,
+          "score_ci95": 0.035361572363230676,
+          "mean_margin": 41.53,
+          "seconds": 1.75803804397583
+        }
+      ],
+      "elo": {
+        "heuristic": 444.7090792374787,
+        "minimax-d4": 1287.0979002609963,
+        "random": 0.0
+      }
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "run": "linear",
+  "board_size": 6,
+  "train_games": 200000,
+  "eval_every": 5000,
+  "eval_openings": 100,
+  "final_eval_openings": 500,
+  "opening_plies": 6,
+  "eval_seed": 4242,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "eps_start": 0.3,
+  "eps_end": 0.05,
+  "eps_decay_frac": 0.5,
+  "opponent": {
+    "type": "heuristic",
+    "kwargs": {
+      "epsilon": 0.05,
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      }
+    }
+  },
+  "final_opponents": {
+    "heuristic": {
+      "type": "heuristic",
+      "kwargs": {
+        "epsilon": 0.05,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "random": {
+      "type": "random"
+    },
+    "minimax-d4": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 4,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    }
+  },
+  "runs": {
+    "q-learning": {
+      "learner": "tabular",
+      "kwargs": {
+        "method": "q",
+        "alpha": 0.1
+      }
+    },
+    "sarsa": {
+      "learner": "tabular",
+      "kwargs": {
+        "method": "sarsa",
+        "alpha": 0.1
+      }
+    },
+    "mc-control": {
+      "learner": "tabular",
+      "kwargs": {
+        "method": "mc"
+      }
+    },
+    "linear": {
+      "learner": "linear",
+      "kwargs": {
+        "alpha": 0.01
+      }
+    },
+    "dqn": {
+      "learner": "dqn",
+      "kwargs": {}
+    },
+    "linear-nodisc": {
+      "learner": "linear",
+      "kwargs": {
+        "alpha": 0.01,
+        "features": [
+          "bias",
+          "mobility",
+          "corner",
+          "xsquare",
+          "edge_stable"
+        ]
+      }
+    },
+    "linear-disconly": {
+      "learner": "linear",
+      "kwargs": {
+        "alpha": 0.01,
+        "features": [
+          "bias",
+          "disc"
+        ]
+      }
+    },
+    "linear-discreward": {
+      "learner": "linear",
+      "kwargs": {
+        "alpha": 0.01
+      },
+      "reward": "disc_margin"
+    }
+  },
+  "seed": 2
+}
