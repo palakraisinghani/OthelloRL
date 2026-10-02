@@ -1,0 +1,34 @@
+\begin{tikzpicture}[scale=0.62, every node/.style={transform shape}]
+\fill[board] (0,0) rectangle (6,6);
+\draw[grid] (1,0) -- (1,6); \draw[grid] (0,1) -- (6,1);
+\draw[grid] (2,0) -- (2,6); \draw[grid] (0,2) -- (6,2);
+\draw[grid] (3,0) -- (3,6); \draw[grid] (0,3) -- (6,3);
+\draw[grid] (4,0) -- (4,6); \draw[grid] (0,4) -- (6,4);
+\draw[grid] (5,0) -- (5,6); \draw[grid] (0,5) -- (6,5);
+\draw[feltdark, line width=1.2pt] (0,0) rectangle (6,6);
+\node[coord] at (0.5,6.4) {a};
+\node[coord] at (1.5,6.4) {b};
+\node[coord] at (2.5,6.4) {c};
+\node[coord] at (3.5,6.4) {d};
+\node[coord] at (4.5,6.4) {e};
+\node[coord] at (5.5,6.4) {f};
+\node[coord] at (-0.4,5.5) {1};
+\node[coord] at (-0.4,4.5) {2};
+\node[coord] at (-0.4,3.5) {3};
+\node[coord] at (-0.4,2.5) {4};
+\node[coord] at (-0.4,1.5) {5};
+\node[coord] at (-0.4,0.5) {6};
+\node[shadow] at (2.56,3.43) {};
+\node[wdisc] at (2.5,3.5) {};
+\node[shadow] at (3.56,3.43) {};
+\node[bdisc] at (3.5,3.5) {};
+\node[shadow] at (2.56,2.43) {};
+\node[bdisc] at (2.5,2.5) {};
+\node[shadow] at (3.56,2.43) {};
+\node[wdisc] at (3.5,2.5) {};
+\node[ghostb] at (2.5,4.5) {};
+\node[ghostb] at (1.5,3.5) {};
+\node[ghostb] at (4.5,2.5) {};
+\node[ghostb] at (3.5,1.5) {};
+\draw[illegal] (4.22,1.22) -- (4.78,1.78) (4.22,1.78) -- (4.78,1.22);
+\end{tikzpicture}

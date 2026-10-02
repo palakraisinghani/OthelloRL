@@ -1,0 +1,40 @@
+# AlphaZero-style self-play on 6x6 (same evaluation protocol and opponents as the
+# classical and DQN+/PPO studies). Candidate for the final model, Oroletto.
+out: results/alphazero
+board_size: 6
+seeds: [0, 1, 2]
+train_games: 100000
+eval_every: 5000
+eval_openings: 100
+final_eval_openings: 500
+opening_plies: 6
+eval_seed: 4242
+start_pos_frac: 0.25        # share of self-play games from the standard start (rest: random 6-ply openings)
+
+# network
+channels: 64
+blocks: 4
+# search
+sims: 64                    # MCTS simulations per self-play move
+eval_sims: 64               # ... per move in evaluation games
+c_puct: 1.5
+dirichlet_alpha: 0.5
+noise_frac: 0.25
+temp_plies: 10              # sample moves by visit count for the first plies, then greedy
+# self-play / training
+games_per_iter: 256
+workers: 7
+concurrent_games: 40
+buffer_positions: 150000
+min_buffer: 5000
+batch: 256
+train_steps: 100
+lr: 0.001
+weight_decay: 0.0001
+train_threads: 4
+
+opponent: {type: heuristic, kwargs: {epsilon: 0.05, weights: TUNED}}   # evaluation only
+final_opponents:
+  heuristic: {type: heuristic, kwargs: {epsilon: 0.05, weights: TUNED}}
+  random: {type: random}
+  minimax-d4: {type: minimax, kwargs: {depth: 4, weights: TUNED}}

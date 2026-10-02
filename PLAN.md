@@ -103,7 +103,7 @@ Extend `dqn.py` with Double DQN and opponent-pool self-play.
 
 **Step 2.8 — Comparison table**
 Columns: final win rate, games to reach the threshold (e.g. 80% vs heuristic), wall-clock time, and variance across seeds. Also run round-robin Elo across every agent built so far. As an extra check, 6x6 is weakly solved (perfect play ends 16–20, a second-player win), so compare the best agent's self-play against that result.
-*Done when:* the table and checkpoints are saved and a winner is chosen.
+*Done when:* the table and checkpoints are saved and a winner is chosen. The winner (after Phases 3–5) is released as **Oroletto**: point `models/oroletto.json` at its run directory so `othello --play oroletto` loads it.
 
 ---
 

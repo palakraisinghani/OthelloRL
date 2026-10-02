@@ -1,0 +1,11 @@
+{
+  "path": "results/alphazero/seed1",
+  "board_size": 6,
+  "play_sims": 200,
+  "about": "AlphaZero-style agent (6x6), seed 1 of the self-play study; best score vs minimax-d4 among the 3 seeds",
+  "final_scores": {
+    "random": 0.999,
+    "heuristic": 0.944,
+    "minimax-d4": 0.787
+  }
+}

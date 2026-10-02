@@ -55,3 +55,26 @@ def test_parse_move():
 def test_bad_level_exits():
     with pytest.raises(SystemExit):
         cli.main(["--play", "9"])
+
+
+def test_oroletto_not_yet_trained(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(cli, "FINAL_MODEL_POINTER", tmp_path / "oroletto.json")
+    assert cli.main(["--play", "oroletto", "--plain"]) == 1
+    assert "has not been trained yet" in capsys.readouterr().err
+
+
+def test_oroletto_loads_pointer(monkeypatch, tmp_path, capsys):
+    import json
+    import shutil
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[1] / "results/classical/linear/seed0"
+    if not (src / "weights.json").exists():
+        import pytest
+        pytest.skip("no trained linear model available")
+    run = tmp_path / "run"
+    shutil.copytree(src, run)
+    (tmp_path / "oroletto.json").write_text(json.dumps({"path": str(run)}))
+    monkeypatch.setattr(cli, "FINAL_MODEL_POINTER", tmp_path / "oroletto.json")
+    scripted(monkeypatch, ["quit"])
+    assert cli.main(["--play", "Oroletto", "--plain"]) == 0
+    assert "vs Oroletto" in capsys.readouterr().out

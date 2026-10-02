@@ -1,0 +1,24 @@
+{
+  "heuristic": {
+    "win_rate": 0.604,
+    "score": 0.6225,
+    "draw_rate": 0.037,
+    "margin": 3.695,
+    "games": 1000
+  },
+  "random": {
+    "win_rate": 0.913,
+    "score": 0.9245,
+    "draw_rate": 0.023,
+    "margin": 15.031,
+    "games": 1000
+  },
+  "minimax-d4": {
+    "win_rate": 0.162,
+    "score": 0.171,
+    "draw_rate": 0.018,
+    "margin": -13.868,
+    "games": 500
+  },
+  "train_seconds": 4699.417627334595
+}

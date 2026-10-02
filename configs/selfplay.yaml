@@ -1,0 +1,25 @@
+# Self-play learning on 6x6. Same budget, evaluation and opponents as the
+# classical study, but training games are against the learner itself or a pool
+# of its past snapshots instead of the fixed heuristic bot.
+out: results/selfplay
+board_size: 6
+train_games: 200000
+eval_every: 5000
+eval_openings: 100
+final_eval_openings: 500
+opening_plies: 6
+eval_seed: 4242
+seeds: [0, 1, 2]
+eps_start: 0.3
+eps_end: 0.05
+eps_decay_frac: 0.5
+
+opponent: {type: heuristic, kwargs: {epsilon: 0.05, weights: TUNED}}   # evaluation only
+final_opponents:
+  heuristic: {type: heuristic, kwargs: {epsilon: 0.05, weights: TUNED}}
+  random: {type: random}
+  minimax-d4: {type: minimax, kwargs: {depth: 4, weights: TUNED}}
+
+runs:
+  dqn-plus: {learner: dqn, kwargs: {double: true}, selfplay: {snapshot_every: 5000, max_size: 20, p_latest: 0.5}}
+  ppo:      {learner: ppo, kwargs: {}, selfplay: {snapshot_every: 5000, max_size: 20, p_latest: 0.5}}

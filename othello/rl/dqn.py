@@ -126,5 +126,33 @@ class DQNLearner(Learner):
         self._losses = []
         return out
 
+    def snapshot(self, seed=0):
+        return FrozenQAgent(self.env, self.q, PLANES, seed=seed)
+
     def save(self, path):
         torch.save(self.q.state_dict(), path)
+
+
+class FrozenQAgent:
+    """A frozen copy of a Q-network used as a self-play opponent (epsilon-greedy)."""
+
+    def __init__(self, env, net, planes, epsilon=0.05, seed=0, name="dqn-snapshot"):
+        import copy
+        import random
+        self.env, self.planes, self.epsilon, self.name = env, planes, epsilon, name
+        self.net = copy.deepcopy(net).eval()
+        self.rng = random.Random(seed)
+
+    def reset(self):
+        pass
+
+    @torch.no_grad()
+    def act(self, state):
+        moves = self.env.legal_moves(state)
+        if len(moves) == 1:
+            return moves[0]
+        if self.rng.random() < self.epsilon:
+            return self.rng.choice(moves)
+        qv = self.net(torch.from_numpy(self.env.encode(state, self.planes))[None])[0].numpy()
+        return max(moves, key=lambda m: qv[m])
+

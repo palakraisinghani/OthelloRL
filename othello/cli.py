@@ -6,6 +6,7 @@ import os
 import random
 import sys
 import textwrap
+from pathlib import Path
 
 from othello.agents.heuristic import HeuristicAgent, HeuristicWeights
 from othello.agents.minimax import MinimaxAgent
@@ -26,6 +27,33 @@ LEVELS = {
 }
 LEVEL_NAMES = {name: k for k, (name, _, _) in LEVELS.items()}
 COLS = "abcdefghijklmnop"
+
+# The project's final trained model. models/oroletto.json points at its run
+# directory once it exists: {"path": "...", "board_size": N, "about": "..."}.
+FINAL_MODEL_NAME = "Oroletto"
+FINAL_MODEL_POINTER = Path(__file__).resolve().parents[1] / "models" / "oroletto.json"
+# Interim suggestion until Oroletto is trained (strongest classical-RL model so far).
+INTERIM_MODEL = Path(__file__).resolve().parents[1] / "results/classical/dqn/seed0"
+
+
+def load_oroletto(env):
+    import json
+    from othello.models import load_model
+    if not FINAL_MODEL_POINTER.exists():
+        raise ValueError(
+            f"{FINAL_MODEL_NAME} has not been trained yet. It will be the project's final self-play model.\n"
+            f"  For now, try the strongest model so far:  othello --model {INTERIM_MODEL}\n"
+            f"  or the strongest bot:                    othello --play expert")
+    info = json.loads(FINAL_MODEL_POINTER.read_text())
+    path = Path(info["path"])
+    if not path.is_absolute():
+        path = FINAL_MODEL_POINTER.parents[1] / path
+    if info.get("board_size") and info["board_size"] != env.n:
+        raise ValueError(f"{FINAL_MODEL_NAME} plays {info['board_size']}x{info['board_size']}; "
+                         f"use --size {info['board_size']}")
+    agent = load_model(path, env, sims=info.get("play_sims"))
+    agent.name = FINAL_MODEL_NAME
+    return agent
 
 
 # ---------------------------------------------------------------- rendering
@@ -298,8 +326,10 @@ def parse_level(x):
         return int(x)
     if x in LEVEL_NAMES:
         return LEVEL_NAMES[x]
+    if x == FINAL_MODEL_NAME.lower():
+        return x
     raise argparse.ArgumentTypeError(
-        f"unknown level {x!r}; choose 1-5 or one of {', '.join(LEVEL_NAMES)}")
+        f"unknown level {x!r}; choose 1-5, one of {', '.join(LEVEL_NAMES)}, or {FINAL_MODEL_NAME.lower()}")
 
 
 def build_parser():
@@ -312,10 +342,12 @@ def build_parser():
                "  othello --tutorial\n"
                "  othello --play                 # medium bot, 6x6\n"
                "  othello --play expert --size 8 --color white\n"
+               "  othello --play oroletto        # the final trained model\n"
                "  othello --model results/classical/linear/seed0\n")
     g = p.add_mutually_exclusive_group()
     g.add_argument("--play", nargs="?", const="3", metavar="LEVEL", type=parse_level,
-                   help="play against a built-in bot (1-5 or name; default: medium)")
+                   help="play against a built-in bot (1-5 or name; default: medium), "
+                        "or 'oroletto', the project's final trained model")
     g.add_argument("--model", metavar="PATH",
                    help="play against a trained model (run directory, model.pt or weights.json)")
     g.add_argument("--tutorial", action="store_true", help="learn the rules, then play a guided practice game")
@@ -353,6 +385,13 @@ def main(argv=None):
         except (ValueError, FileNotFoundError) as e:
             p.error(str(e))
         opp_name = opponent.name
+    elif a.play == FINAL_MODEL_NAME.lower():
+        try:
+            opponent = load_oroletto(env)
+        except (ValueError, FileNotFoundError) as e:
+            print(e, file=sys.stderr)
+            return 1
+        opp_name = FINAL_MODEL_NAME
     else:
         level = a.play if a.play is not None else 3
         name, _, make = LEVELS[level]

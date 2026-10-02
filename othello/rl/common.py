@@ -93,8 +93,12 @@ def epsilon_at(cfg, ep, total):
     return e0 + (e1 - e0) * k
 
 
-def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None):
-    """Train `learner` against cfg['opponent'] and log learning curves to CSV."""
+def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None, pool=None):
+    """Train `learner` and log learning curves to CSV.
+
+    Opponent: the fixed cfg['opponent'] bot, or, when `pool` is given (self-play),
+    an opponent drawn from the pool at the start of every game.
+    """
     env = learner.env
     out_dir.mkdir(parents=True, exist_ok=True)
     seed = cfg["seed"]
@@ -113,7 +117,8 @@ def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None):
             if ep % cfg["eval_every"] == 0:
                 learner.epsilon = 0.0
                 row = {"games": ep, "seconds": time.time() - t0,
-                       **evaluate(learner, eval_opp, eval_openings), **learner.stats()}
+                       **evaluate(learner, eval_opp, eval_openings), **learner.stats(),
+                       **(pool.stats() if pool is not None else {})}
                 if writer is None:
                     fields = list(row)
                     writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
@@ -125,6 +130,9 @@ def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None):
             if ep == total:
                 break
             learner.epsilon = epsilon_at(cfg, ep, total)
+            if pool is not None:
+                pool.maybe_snapshot(ep)
+                opp = pool.sample()
             colour = ep % 2
             s = env.initial_state()
             for m in rng.choice(train_openings_pool):
