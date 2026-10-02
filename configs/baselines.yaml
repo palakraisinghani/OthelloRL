@@ -1,0 +1,32 @@
+# Environment validation and fixed reference opponents.
+seed: 0
+workers: 8
+opening_plies: 6          # random plies before agents take over (6 => ~95% distinct openings)
+
+throughput:
+  sizes: [6, 8, 10]
+  openings: 1000          # random-vs-random games = 2 x openings, single core
+
+heuristic_tuning:
+  board_size: 6
+  openings: 200           # 400 games per candidate per opponent
+  grid:
+    disc: [0, 1]
+    mobility: [0, 2, 5, 10]
+    corner: [0, 10, 25, 50]
+    xsquare: [0, -10, -25]
+  # each candidate plays these fixed opponents; selection = mean score
+  opponents:
+    - {name: disc-greedy, type: heuristic, kwargs: {weights: {disc: 1, mobility: 0, corner: 0, xsquare: 0}}}
+    - {name: hand-default, type: heuristic, kwargs: {weights: {disc: 1, mobility: 5, corner: 25, xsquare: 0}}}
+    - {name: random, type: random}
+
+minimax_depth_sweep:
+  board_size: 6
+  depths: [1, 2, 3, 4, 5]
+  openings: 200
+
+gate:
+  sizes: {6: 500, 8: 200, 10: 100}   # openings per match-up (games = 2x)
+  heuristic_epsilon: 0.05
+  minimax_depth: 4
