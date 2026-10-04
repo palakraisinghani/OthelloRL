@@ -72,7 +72,13 @@ def run_one(cfg, run, seed, games=None, out=OUT):
     reward_fn = disc_margin_reward if run_cfg.get("reward") == "disc_margin" else None
     t0 = time.time()
     pool = None
-    if "selfplay" in run_cfg:
+    if "league" in run_cfg:
+        from othello.rl.pool import League, build_fixed_members
+        lg = dict(run_cfg["league"])
+        specs = [{**m, "path": str(ROOT / m["path"])} if "path" in m else m for m in cfg["league_members"]]
+        fixed = build_fixed_members(specs, env, seed=seed + 500)
+        pool = League(learner, fixed, seed=seed + 31, **lg)
+    elif "selfplay" in run_cfg:
         from othello.rl.pool import OpponentPool
         pool = OpponentPool(learner, seed=seed + 31, **run_cfg["selfplay"])
     train(learner, cfg, out_dir, reward_fn, pool)
@@ -80,7 +86,7 @@ def run_one(cfg, run, seed, games=None, out=OUT):
     res["train_seconds"] = time.time() - t0
     (out_dir / "final.json").write_text(json.dumps(res, indent=2))
     if hasattr(learner, "save"):
-        learner.save(out_dir / "model.pt")
+        learner.save(out_dir / getattr(learner, "save_name", "model.pt"))
     if hasattr(learner, "w"):
         (out_dir / "weights.json").write_text(json.dumps(dict(zip(learner.features, learner.w.tolist()))))
     print("done", run, seed, json.dumps(res), flush=True)

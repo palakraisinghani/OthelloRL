@@ -10,3 +10,5 @@ results/**/checkpoints/
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+results/**/table.pkl.gz
+results/**/ckpt/

@@ -38,10 +38,12 @@ class ReplayBuffer:
         self.s2 = np.zeros((cap, *obs_shape), np.float32)
         self.m2 = np.zeros((cap, n_actions), bool)
         self.d = np.zeros(cap, np.float32)
+        self.src = np.zeros(cap, bool)          # True = transition from a league (non-self-play) game
 
-    def add(self, s, a, r, s2, m2, d):
+    def add(self, s, a, r, s2, m2, d, from_league=False):
         i = self.i
         self.s[i], self.a[i], self.r[i], self.s2[i], self.m2[i], self.d[i] = s, a, r, s2, m2, d
+        self.src[i] = from_league
         self.i = (i + 1) % self.cap
         self.full = self.full or self.i == 0
 
@@ -94,7 +96,7 @@ class DQNLearner(Learner):
                 s2, m2 = obs[t], np.zeros(self.env.num_actions, bool)
             else:
                 s2, m2 = obs[t + 1], self.env.legal_mask(traj[t + 1][0])
-            self.buf.add(obs[t], a, rewards[t], s2, m2, float(done))
+            self.buf.add(obs[t], a, rewards[t], s2, m2, float(done), getattr(self, "data_from_league", False))
             self.steps += 1
             if len(self.buf) >= self.warmup and self.steps % self.train_every == 0:
                 self._update()
@@ -122,7 +124,9 @@ class DQNLearner(Learner):
             self.tq.load_state_dict(self.q.state_dict())
 
     def stats(self):
-        out = {"updates": self.updates, "loss": float(np.mean(self._losses)) if self._losses else float("nan")}
+        n = len(self.buf)
+        out = {"updates": self.updates, "loss": float(np.mean(self._losses)) if self._losses else float("nan"),
+               "buffer_league_share": float(self.buf.src[:n].mean()) if n else float("nan")}
         self._losses = []
         return out
 

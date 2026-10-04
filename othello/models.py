@@ -21,8 +21,8 @@ class LearnerAgent(Agent):
 def load_model(path, env, sims=None) -> Agent:
     """`path` is a run directory (results/classical/<run>/seed<k>) or a file in it.
 
-    Supported: AlphaZero, PPO and DQN (`model.pt` + `config.json`) and linear FA
-    (`weights.json`). `sims` sets AlphaZero's search budget per move (default 200).
+    Supported: AlphaZero, PPO and DQN (`model.pt` + `config.json`), linear FA
+    (`weights.json`) and tabular learners (`table.pkl.gz`). `sims` sets AlphaZero's search budget per move (default 200).
     """
     p = Path(path)
     d = p if p.is_dir() else p.parent
@@ -30,6 +30,13 @@ def load_model(path, env, sims=None) -> Agent:
     cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
     trained_n = cfg.get("board_size")
     label = f"{cfg.get('run', d.name)} ({d.name})"
+
+    if (d / "table.pkl.gz").exists() and (p.is_dir() or p.name == "table.pkl.gz"):
+        from othello.rl.tabular import TabularLearner
+        if trained_n and trained_n != env.n:
+            raise ValueError(f"this table was trained on {trained_n}x{trained_n}; use --size {trained_n}")
+        learner = TabularLearner.load(env, d / "table.pkl.gz")
+        return LearnerAgent(learner, f"{learner.name} table {label}")
 
     if (d / "weights.json").exists() and (p.is_dir() or p.name == "weights.json"):
         from othello.rl.linear import LinearQLearner

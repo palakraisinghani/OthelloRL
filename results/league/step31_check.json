@@ -1,0 +1,12 @@
+{
+  "retrain_identical_to_phase1": {"q-learning": true, "sarsa": true, "mc-control": true},
+  "compared": "final.json (all scores) and every curve.csv row, excluding wall-clock fields",
+  "load_test": {
+    "illegal_moves_in_20_games_vs_random": 0,
+    "score_vs_heuristic_1000_games_loaded_vs_recorded": {
+      "q-learning": [0.102, 0.1025], "sarsa": [0.107, 0.080], "mc-control": [0.572, 0.561]
+    },
+    "note": "exact replay is impossible because random tie-breaking state is not saved; agreement judged within 2x the 95% CI"
+  },
+  "league_agents_loaded": ["random", "heuristic", "minimax-d4", "q-learning", "sarsa", "mc-control", "linear", "dqn"]
+}

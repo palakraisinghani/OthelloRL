@@ -129,10 +129,16 @@ def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None, pool=None)
                                                   for k, v in row.items()}, flush=True)
             if ep == total:
                 break
+            ck = cfg.get("checkpoint_every")
+            if ck and ep > 0 and ep % ck == 0 and hasattr(learner, "save"):
+                (out_dir / "ckpt").mkdir(exist_ok=True)
+                learner.save(out_dir / "ckpt" / f"g{ep:06d}.pt")
             learner.epsilon = epsilon_at(cfg, ep, total)
             if pool is not None:
                 pool.maybe_snapshot(ep)
                 opp = pool.sample()
+                # tag this game's experience as league data or self-play (for replay-buffer analysis)
+                learner.data_from_league = getattr(pool, "last_kind", "self") not in (None, "self")
             colour = ep % 2
             s = env.initial_state()
             for m in rng.choice(train_openings_pool):
@@ -154,6 +160,8 @@ def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None, pool=None)
             else:
                 rewards = reward_fn(env, traj, s, colour, final)
             learner.end_episode(traj, rewards)
+            if pool is not None and hasattr(pool, "record"):
+                pool.record(final)
     return log_path
 
 

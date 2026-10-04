@@ -45,3 +45,31 @@ def test_symmetric_positions_share_entries():
     s0 = env.initial_state()
     keys = {L._key(env.step(s0, a))[0] for a in env.legal_moves(s0)}
     assert len(keys) == 1   # the 4 opening moves are symmetric
+
+
+def test_tabular_save_load_roundtrip(tmp_path):
+    from othello.models import load_model
+    env = OthelloEnv(6)
+    rng = random.Random(0)
+    L = TabularLearner(env, 0, method="mc")
+    for _ in range(20):                       # a few short random "episodes"
+        s = env.initial_state()
+        traj = []
+        for _ in range(6):
+            a = rng.choice(env.legal_moves(s))
+            traj.append((s, a))
+            s = env.step(env.step(s, a), rng.choice(env.legal_moves(env.step(s, a))))
+        L.end_episode(traj, [0.0] * 5 + [rng.choice([-1.0, 1.0])])
+    (tmp_path / "config.json").write_text('{"board_size": 6, "run": "mc-control"}')
+    L.save(tmp_path / L.save_name)
+    agent = load_model(tmp_path, env)
+    L2 = agent.learner
+    assert L2.q == L.q and L2.visits == L.visits and L2.states == L.states and L2.method == "mc"
+    s = env.initial_state()
+    for _ in range(10):                       # greedy choices agree wherever values differ
+        _, v1 = L._values(s)
+        _, v2 = L2._values(s)
+        assert v1 == v2
+        s = env.step(s, env.legal_moves(s)[0])
+        if env.is_terminal(s):
+            break

@@ -1,0 +1,79 @@
+{
+  "minimax-d2": {
+    "per_seed": [
+      {
+        "games": 400,
+        "wins": 126,
+        "draws": 12,
+        "losses": 262,
+        "win_rate": 0.315,
+        "score": 0.33,
+        "score_ci95": 0.04608084634639429,
+        "mean_margin": -6.96,
+        "seconds": 21.16679286956787
+      },
+      {
+        "games": 400,
+        "wins": 127,
+        "draws": 10,
+        "losses": 263,
+        "win_rate": 0.3175,
+        "score": 0.33,
+        "score_ci95": 0.04608084634639429,
+        "mean_margin": -7.28,
+        "seconds": 21.11549949645996
+      },
+      {
+        "games": 400,
+        "wins": 126,
+        "draws": 14,
+        "losses": 260,
+        "win_rate": 0.315,
+        "score": 0.3325,
+        "score_ci95": 0.046168688252970755,
+        "mean_margin": -7.52,
+        "seconds": 21.377789735794067
+      }
+    ],
+    "mean_score": 0.33083333333333337
+  },
+  "minimax-d3": {
+    "per_seed": [
+      {
+        "games": 400,
+        "wins": 92,
+        "draws": 9,
+        "losses": 299,
+        "win_rate": 0.23,
+        "score": 0.24125,
+        "score_ci95": 0.04192847712176057,
+        "mean_margin": -10.85,
+        "seconds": 24.19956111907959
+      },
+      {
+        "games": 400,
+        "wins": 101,
+        "draws": 8,
+        "losses": 291,
+        "win_rate": 0.2525,
+        "score": 0.2625,
+        "score_ci95": 0.0431193039716552,
+        "mean_margin": -11.2975,
+        "seconds": 24.62259030342102
+      },
+      {
+        "games": 400,
+        "wins": 93,
+        "draws": 5,
+        "losses": 302,
+        "win_rate": 0.2325,
+        "score": 0.23875,
+        "score_ci95": 0.041779324955652404,
+        "mean_margin": -11.295,
+        "seconds": 24.04954981803894
+      }
+    ],
+    "mean_score": 0.24750000000000003
+  },
+  "accepted": true
+}

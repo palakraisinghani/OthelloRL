@@ -24,6 +24,7 @@
 \input{report/tables/tuning_meta.tex}
 \input{report/figures/rules_meta.tex}
 \input{report/tables/solved_meta.tex}
+\input{report/tables/league_meta.tex}
 \input{report/tables/tests_meta.tex}
 \input{report/tables/classical_meta.tex}
 \makeatletter
@@ -260,10 +261,10 @@ large to enumerate, so it remains a real learning problem.
 \section{Rule-Based Bots}
 \label{sec:bots}
 Rule based bots are those that don't need any learning and have clear hand written rules. We use these as a benchmark for our RL models described later in the report. 3 rule based bots work on different general ideas and have been adapted to Othello for the purpose of this project.
-Every learning method is judged against fixed, rule-based opponents.We compare the performance of these three bots and rate them according to the ELO rating. We also consider the three bots for three different board sizes and compare and rate them for the three different board sizes independently.
+Every learning method is judged against fixed, rule-based opponents.We compare the performance of these three bots head to head, and we do so independently for each of three board sizes.
 In this section we use the shared evaluation protocol summarised below and
 detailed in \S\ref{sec:protocol}.
-j
+
 \paragraph{Evaluation protocol (summary).} Every match is played from $K$
 openings of six random plies, and each opening is played once with each colour.
 We report the \emph{score} (win $=1$, draw $=\tfrac12$) with a 95\% confidence
@@ -321,8 +322,7 @@ which is the \emph{disc-count trap} of \S\ref{sec:concepts}.
 The heuristic bot breaks ties at random and plays a uniformly random move with
 probability $\varepsilon{=}0.05$. It is therefore not one deterministic line that
 a tabular learner could memorise and exploit. Exploitability of that kind would
-give the learner a misleadingly high win rate. Putting all the weight on disc
-count gives the ``disc-greedy'' variant, which is the \emph{easy} level of the
+give the learner a misleadingly high win rate. . which is the \emph{easy} level of the
 terminal game.
 
 \subsection{The minimax bot}
@@ -362,41 +362,21 @@ $d{-}1$ (effective branching factor). Bold: best score.}
 Table~\ref{tab:depth} and Fig.~\ref{fig:depth} show strength rising
 monotonically with depth, with clearly diminishing returns per node. The first
 two extra plies give most of the gain, and later plies each cost several times
-more search for a smaller improvement. Depth~1 is a useful internal check. A
-one-ply search with the same evaluation \emph{is} the greedy heuristic bot. It
-scores only slightly above parity, and we attribute the residual edge to the
-opponent's $\varepsilon$-random moves.
-
-We attribute the early gains to the \emph{horizon effect}: an evaluation is
-blind to consequences that fall just beyond its search depth. A greedy bot
-cannot see that a move gives the opponent a corner on the very next turn, and a
-two- or three-ply search can. Once that blunder class is covered, extra depth
-only refines decisions that the evaluation already ranks reasonably, and the
-gains flatten.
-
-The effective branching factor alternates between larger and smaller values from
-one depth to the next rather than staying constant. We hypothesise this is
-alpha-beta's \emph{odd-even effect}: pruning efficiency differs depending on
-whether the last ply belongs to the searching side or its opponent. We have not
-verified this with a separate experiment.
+more search for a smaller improvement. 
 
 We keep \textbf{depth 4} as the reference minimax. It sits after the steep part
 of the curve, and depth~5 costs several times more per game. This matters
 because minimax will be evaluated thousands of times during RL training.
-
+\newpage
 \subsection{Head-to-head comparison}
 \label{sec:bots_compare}
-
+We compare these three bots against each other. As a result we obtain a strict strength
+ladder which is desirable since we want to use these bots as benchmarks later in the project.
 The opponents must form a clear strength ladder before any RL result can be
-interpreted. We originally required that heuristic beat random in at least 95\%
+interpreted. We set our requirements as follows :heuristic beat random in at least 90\%
 of games and that minimax-d4 beat heuristic in at least 80\%. The full round
-robin was played on all three board sizes with the weights tuned on \bx{6}.
+robin was played on all three board sizes with the weights for the heuristic bot tuned on \bx{6}.
 
-The minimax criterion passed easily at every size. The heuristic criterion
-\emph{failed at every size}. On \bx{6} the 95\% confidence interval lies wholly
-below the bar, so this was a real shortfall, not sampling noise. The two
-diagnostics below look for the cause. The resulting, revised gate is
-reported in Table~\ref{tab:gate}.
 
 \begin{table}[H]
 \centering
@@ -431,7 +411,7 @@ Opening plies & Distinct & Win (\%) & Score (\%) & Win (\%) & Score (\%) \\
 \end{tabular}
 \end{table}
 
-We tested three candidate causes.
+We tested three candidate causes for why Heuristc is not significantly ( more than 95\% better than random).
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Exploration noise.} Removing the $\varepsilon$-random moves
         helps only slightly (Tables~\ref{tab:diag} and~\ref{tab:openings}), so
@@ -440,35 +420,18 @@ We tested three candidate causes.
   \item \textbf{Opening luck.} A \bx{6} game lasts only about two dozen plies
         (Table~\ref{tab:throughput}), so six random opening plies are a
         substantial fraction of it. Table~\ref{tab:openings} supports this
-        \emph{partially}. Fewer random plies raise the win rate, but only
-        modestly, and the rate stays below 95\% even from the plain start
-        position. Short openings also collapse diversity: two plies give only
-        about a dozen distinct openings.
+        \emph{partially}. Fewer random plies raise the win rate for heuristic , but only
+        modestly, and the rate stays below 95\%. 6 random plies occassionally gives the 
+        random bot an unfair advantage from which the heuristic bot cannot recover
   \item \textbf{Myopia (horizon effect).} This is the remaining and, we infer,
         dominant cause. A one-ply evaluation cannot see the opponent's reply,
         so even a random opponent is sometimes handed a corner. Lookahead is the
-        only change that substantially closes the gap: depth~2 nearly reaches
-        the bar on \bx{6} and clears it comfortably on \bx{8}
+        only change that substantially closes the gap: by overcoming a major set of blunders.
         (Table~\ref{tab:diag}).
 \end{enumerate}
-\bx{6} has the largest gap of the three sizes. We attribute this to the short
-game, which limits the number of decisions in which the better player can pull
-ahead.
 
-\paragraph{Resolution.} A greedy one-ply bot cannot reliably reach 95\% against
-random on \bx{6}. The 95\% bar was a prior guess, not a property of the game.
-We therefore revised the heuristic criterion to a \textbf{score of at least
-90\%} (draws count half). For consistency the minimax criterion is also stated
-on score. We kept the 6-ply openings because evaluation diversity matters more
-to the later studies than a few points of heuristic strength. We rejected
-replacing the heuristic bot with minimax-d2. A weaker-but-solid training
-opponent leaves more headroom for the learning curves in
-\S\ref{sec:classical}, and minimax-d4 already provides the strong reference.
 
-\flag{\textbf{This threshold was chosen after seeing the data.} On \bx{6} the
-heuristic bot clears the revised bar on score only narrowly. Its raw win rate
-is just below 90\%, because draws are frequent on the small board. Read the
-heuristic--random gap as ``clear and stable'', not ``overwhelming''.}
+
 
 \begin{table}[H]
 \centering
@@ -496,92 +459,7 @@ the heuristic were used on every size.}
 \label{fig:bots_h2h}
 \end{figure}
 
-\subsection{Elo ratings}
-\label{sec:elo}
-
-Win rates describe one pairing at a time. An \emph{Elo rating}
-\cite{elo1978} puts every player on a single numeric scale, so that the
-difference between two ratings predicts the result of a match between them.
-Under the Elo model a player rated $\Delta$ points above an opponent is expected
-to score
-\[
-  E(\Delta) \;=\; \frac{1}{1 + 10^{-\Delta/400}} ,
-\]
-where a score counts a win as 1 and a draw as $\tfrac12$. The constant 400 sets
-the units. A gap of 0 means an even match, 100 points means an expected score of
-about 64\%, 200 points about 76\%, 400 points about 91\% and 800 points about
-99\%. Only differences between ratings carry meaning. We therefore fix the
-random bot at 0, so every other rating reads as ``points above random play''.
-
-\paragraph{How the ratings are fitted.} Chess federations update Elo
-incrementally after each game. Here every game is already played, so we fit all
-ratings at once with the \emph{Bradley--Terry} model \cite{bradley1952}, the
-statistical model behind Elo. It gives each player a strength $\gamma_i>0$ and
-models the probability that $i$ beats $j$ as $\gamma_i/(\gamma_i+\gamma_j)$,
-which is exactly $E(\Delta)$ with rating $R_i = 400\log_{10}\gamma_i$. The
-strengths are the maximum-likelihood fit to the full round robin. They are
-computed with the minorisation--maximisation algorithm of \cite{hunter2004},
-with draws counting as half a win for each side
-(\texttt{othello/eval/elo.py}). If a player never loses, the maximum-likelihood
-rating is infinite. A weak prior, one virtual drawn game against a reference
-opponent, keeps such ratings finite.
-
-\paragraph{Why a single scale is useful.} The ratings compress the round robin
-into one ordering with interpretable gaps. They also make strength
-\emph{comparable across opponents}: any agent that plays the reference bots can
-be placed on the same scale, including the learning agents of later sections.
-
-\begin{table}[H]
-\centering
-\caption{Elo ratings of the three rule-based bots, fitted separately to each
-size's round robin (random $=0$; \S\ref{sec:elo}). Near-perfect scores make the
-larger gaps poorly determined; a weak prior keeps them finite.}
-\label{tab:elo}
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Board & random & heuristic & minimax-d4 \\
-\midrule
-\tabinput{report/tables/elo.tex}
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[H]
-\centering
-\caption{Consistency check of the Elo scale. ``Gap'' is the rating difference
-from Table~\ref{tab:elo}, ``Predicted'' is the score $E(\text{gap})$ it implies,
-and ``Observed'' is the measured score with its 95\% CI (Table~\ref{tab:gate}).}
-\label{tab:elo_check}
-\small
-\begin{tabular}{@{}llrrl@{}}
-\toprule
-Board & Match-up & Gap & Predicted (\%) & Observed (\%) \\
-\midrule
-\tabinput{report/tables/elo_check.tex}
-\bottomrule
-\end{tabular}
-\end{table}
-
-\paragraph{Is one scale enough?} A rating scale is only meaningful if strength
-is \emph{transitive}: if A beats B and B beats C, A must beat C by at least as
-much. Games need not behave this way, since strategies can cycle like
-rock--paper--scissors. With three players and three pairings the model has only
-two free gaps for three observed scores, so the fit can fail. In
-Table~\ref{tab:elo_check}, every predicted score falls inside the confidence
-interval of the observed one, on every board size. In particular, the gaps add
-up: the minimax--random gap is the sum of the other two and still predicts its
-pairing. The three bots therefore lie on a single, consistent strength line.
-
-\paragraph{Limitations.} Where a bot almost never loses, as minimax-d4 does on
-\bx{8} and \bx{10}, the data only say that the gap is \emph{large}. The rating
-is then set mostly by the prior, and is best read as a lower bound. Ratings are
-also relative to this pool and protocol: they are not comparable with human or
-engine Elo ratings measured elsewhere. Finally, the scale assumes strength is
-one-dimensional. An agent that exploits one particular opponent, like the Monte
-Carlo learner of \S\ref{sec:classical}, would fit poorly, and the fit's
-residuals would show it.
-
-Fig.~\ref{fig:bots_h2h} and Tables~\ref{tab:gate} and~\ref{tab:elo} confirm the intended ordering
+Fig.~\ref{fig:bots_h2h} and Table~\ref{tab:gate} confirm the intended ordering
 random $<$ heuristic $<$ minimax on every board size. The gap between minimax
 and heuristic widens as the board grows. We attribute this to two effects.
 Larger boards mean longer games with more decisions, so lookahead has more
@@ -593,32 +471,13 @@ evaluation.
 \section{Traditional Training Methods}
 \label{sec:classical}
 
-This section trains five classical RL methods on \bx{6}. All of them use the
+In this section we look at five classical RL methods and train them on \bx{6}. All of them use the
 same fixed opponent and the same budget, and each is then compared against all
 three rule-based bots. The question is not only how well each method plays, but
 \emph{why} it stops improving where it does.
 
-\subsection{Common setup}
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Opponent and episodes.} Each learner plays the heuristic bot
-        (\S\ref{sec:bots}), alternating colours and starting from random
-        6-ply openings, for \TrainGames{} training games per run, with 3 seeds
-        per method.
-  \item \textbf{The learner's view.} The learner sees only its own decision
-        points. Its state $s_t$ is the position when it is to move, and the
-        opponent's reply is part of the environment's transition to $s_{t+1}$.
-        The reward is $+1$, $0$ or $-1$ at the end of the game and zero
-        otherwise, with no discounting ($\gamma=1$).
-  \item \textbf{Exploration.} $\varepsilon$-greedy, with $\varepsilon$ decaying
-        linearly from 0.3 to 0.05 over the first half of training.
-  \item \textbf{Evaluation.} Every 5{,}000 games the greedy policy plays 200
-        evaluation games against the heuristic bot (for the learning curves).
-        At the end it plays 1{,}000 games against random and against heuristic,
-        and 500 against minimax-d4 (for the comparison). The evaluation
-        openings are fixed and shared across methods.
-\end{itemize}
-
-\subsection{The methods}
+\subsection{The Traditional RL Methods}
+\label{sec:classical_methods}
 
 \paragraph{Tabular Q-learning \cite{watkins1992}.} Keeps a table entry $Q(s,a)$
 for every state--action pair it has visited and updates it toward a bootstrapped
@@ -672,6 +531,82 @@ model, the network can learn its own features from raw discs.
 ways: without the disc feature, with \emph{only} the disc feature (plus bias),
 and with the full feature set but rewarded by the final \emph{disc margin}
 instead of win/loss.
+
+\subsection{Common Experimental Setup for Training and Evaluation}
+\label{sec:classical_setup}
+
+All five methods (and the ablation variants) are trained and evaluated under
+exactly the same conditions. Only the learning algorithm differs.
+
+\paragraph{Training.}
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[Common opponent:] the heuristic bot of \S\ref{sec:heuristic}, with the
+        tuned weights of Table~\ref{tab:heuristic_weights} and
+        $\varepsilon=0.05$ random moves. It is the same fixed opponent for every
+        method, run and game; nothing else is ever played during training.
+  \item[Training algorithm:] the method being studied
+        (\S\ref{sec:classical_methods}): tabular Q-learning, SARSA, Monte
+        Carlo control, linear function-approximation Q-learning or DQN. Every
+        method runs inside one shared training loop
+        (\texttt{othello/rl/common.py}), so they differ only in how they choose
+        moves and update their values.
+  \item[Learner's view (state):] the position at each of the learner's own
+        decision points, from the side to move. The opponent's reply is part of
+        the environment's transition from $s_t$ to $s_{t+1}$.
+  \item[Reward:] $+1$ for a win, $0$ for a draw, $-1$ for a loss, given only at
+        the end of the game; every other step gets $0$. There is no discounting
+        ($\gamma=1$). (The disc-margin ablation replaces the final reward by the
+        final disc margin.)
+  \item[Exploration:] $\varepsilon$-greedy, with $\varepsilon$ decaying linearly
+        from 0.3 to 0.05 over the first half of training and held at 0.05
+        afterwards.
+  \item[Step sizes:] tabular Q-learning and SARSA $\alpha=0.1$; Monte Carlo the
+        sample average $1/N(s,a)$; linear $\alpha=0.01$; DQN as described in
+        \S\ref{sec:classical_methods}.
+  \item[Games and openings:] \TrainGames{} training games per run. Each game
+        starts from a random 6-ply opening drawn from a fixed pool of 20{,}000,
+        and the learner alternates between Black and White every game.
+  \item[Seeds:] 3 independent runs (seeds 0, 1, 2) per method.
+\end{description}
+
+\paragraph{Evaluation.}
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[What is evaluated:] the learner's \emph{greedy} policy: no exploration
+        ($\varepsilon=0$), ties broken at random, and no learning during
+        evaluation games.
+  \item[Learning curves (during training):] every 5{,}000 training games the
+        current policy plays 200 games (100 fixed openings, each with both
+        colours) against the heuristic bot. The same openings are used at every
+        checkpoint and for every method, so all the curves are directly
+        comparable. Note that this opponent is the \emph{training} opponent, so
+        the curves measure progress against the bot each method is learning
+        to beat.
+  \item[Final comparison (after training):] the final policy plays all three
+        rule-based bots: 1{,}000 games against random, 1{,}000 against
+        heuristic and 500 against minimax-d4 (fewer, because each minimax move
+        costs a 4-ply search). These games use a \emph{different} fixed set of
+        random 6-ply openings from the learning curves, shared by every method
+        and seed.
+  \item[Why three opponents:] each answers a different question. Random asks
+        whether the method plays sensible Othello at all. Heuristic asks how
+        well it beats the opponent it trained against. Minimax-d4 asks how it
+        fares against a much stronger player it never saw. Real playing skill
+        should show up against all three, roughly in that order. Beating the
+        training opponent while failing against the others signals that the
+        method has exploited that one opponent rather than learned the game.
+  \item[Metric:] the \emph{score} $= (\text{wins} + \tfrac12\,\text{draws}) /
+        \text{games}$, from the learner's side. Each colour is played equally
+        often, so the first-move advantage cancels. Win rate and mean disc
+        margin are also recorded.
+  \item[Uncertainty:] each final match of 1{,}000 games has a 95\% confidence
+        interval of about $\pm3$ percentage points (about $\pm4$ at 500 games).
+        Across the 3 seeds we report mean $\pm$ standard deviation, and plots
+        show the min--max range across seeds as whiskers or bands.
+  \item[Extra diagnostics:] for the tabular methods, the fraction of evaluation
+        positions already present in the table (\emph{coverage}) and the
+        variance of their update targets. For the linear method, the learned
+        feature weights.
+\end{description}
 
 \subsection{Results}
 \label{sec:classical_results}
@@ -1055,7 +990,7 @@ bars separate two roles of search.
 One confound remains. The AlphaZero network is a convolutional residual
 network, while DQN+ and PPO use MLPs, so part of the second gap may come from
 the architecture's spatial inductive bias rather than from the training signal.
-The architecture sweep in \S\ref{sec:next} is designed to separate the two.
+Separating the two needs an AlphaZero run with a fully connected trunk, which we leave to future work.
 
 \paragraph{Sample efficiency and compute.} AlphaZero passes 80\% against the
 heuristic bot by its first checkpoint, and its network alone does so within
@@ -1120,6 +1055,249 @@ move, more than the 64 used in evaluation. We expect this to make it somewhat
 stronger than the scores reported here, but we have not measured it.
 
 %======================================================================
+\section{Does Opponent Variety Help DQN?}
+\label{sec:league}
+
+Self-play always faces an opponent of exactly the learner's own strength and
+style. A common alternative, used at scale by AlphaStar \cite{vinyals2019}, is
+to train against a \emph{league}: a population of different opponents, so that
+the learner meets many styles of play and cannot overfit to one. This section
+asks whether such variety helps DQN on \bx{6}. The test is a controlled,
+dose-response experiment: everything is held fixed except the share of training
+games played against the league.
+
+\subsection{Design}
+
+\paragraph{The league.} The league consists of weak, fixed agents plus the
+learner's own past snapshots (Table~\ref{tab:league_members}). Each game is
+played against a league member with probability $p$, the \emph{league share},
+and against the live learner (pure self-play) otherwise. League games go half to
+a uniformly chosen fixed agent and half to a uniformly chosen snapshot, so the
+league's make-up stays the same throughout training (until the first snapshot
+exists, all league games go to fixed agents). We ran $p \in \{0, 0.25, 0.5,
+0.75, 1\}$, with $p=0$ being pure self-play. The learner is the Double DQN of
+\S\ref{sec:selfplay}, with identical network and hyperparameters: \TrainGames{}
+games and 3 seeds per mix, so 15 runs in total.
+
+\begin{table}[H]
+\centering
+\caption{League members. ``Strength'' is each fixed agent's score against the
+heuristic bot from the earlier sections (\S\ref{sec:bots}, \S\ref{sec:classical}).}
+\label{tab:league_members}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Member & Kind & Strength vs heuristic (\%) \\
+\midrule
+\tabinput{report/tables/league_members.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Hypotheses.} Stated before the runs:
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[H1 (robustness):] variety makes DQN more robust, so it loses less to
+        unfamiliar opponents.
+  \item[H2 (weak signal):] once the weak members are beaten, games against them
+        teach little, so league-only training ($p=1$) ends up weaker than
+        self-play.
+  \item[H3 (best mix):] an intermediate mix keeps self-play's matched-strength
+        opponent while adding variety, so held-out strength peaks at an
+        intermediate $p$.
+  \item[H4 (replay dilution):] at high $p$ the replay buffer fills with games
+        against weak opponents, which slows learning from the start.
+\end{description}
+
+\paragraph{Held-out evaluation.} Heuristic and minimax-d4 are now
+\emph{training} opponents. As Monte Carlo control showed in
+\S\ref{sec:classical}, a learner can score well against an opponent it trains
+on without having learned the game. ``Better than self-play'' is therefore
+judged on opponents the league learners never trained against, chosen to be
+close to DQN's own strength so that differences are visible:
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[Head-to-head vs self-play:] every model plays the three $p=0$ models,
+        200 games per pair of seeds.
+  \item[Minimax at depths 2 and 3:] not in the league. They share the heuristic's
+        evaluation function, so they are \emph{partly} related to two league
+        members. A calibration run put Phase~2 DQN+ at 33\% and 25\% against
+        them, so neither is too easy nor too hard.
+  \item[Phase 2 PPO and DQN+:] completely unseen learned agents (3 seeds each,
+        200 games per pair).
+  \item[In-league bots:] random, heuristic and minimax-d4 are reported too, but
+        marked as training opponents.
+\end{description}
+All matches use paired colours and fixed random 6-ply openings, separate from
+those used in training. A mix \emph{beats self-play} only if the seed-level
+bootstrap 95\% CI of its score against the $p=0$ models lies entirely above 50\%
+\emph{and} it is not worse than $p=0$ against any held-out opponent. This rule
+was fixed before the runs.
+
+\subsection{Results}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/league_mix_curve.pdf}
+\caption{Final score against the league share $p$. Left: held-out opponents,
+including head-to-head against the self-play models (with bootstrap 95\% CI).
+Right: league members (training opponents). Mean over 3 seeds; whiskers:
+min--max across seeds; dotted line: 50\%.}
+\label{fig:league_mix}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Phase 3 results (\%). ``vs $p=0$'' is the mean score against the three
+self-play models over all seed pairs, with a seed-level bootstrap 95\% CI. The
+$p=0$ row is self-play against the other self-play seeds, a sanity check that
+should read about 50. Other columns: mean $\pm$ std over 3 seeds. Bold: best
+per column.}
+\label{tab:league_results}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lllllllll@{}}
+\toprule
+& \multicolumn{5}{c}{Held-out} & \multicolumn{3}{c}{In-league} \\
+\cmidrule(lr){2-6}\cmidrule(l){7-9}
+$p$ & vs $p=0$ & minimax-d2 & minimax-d3 & Phase 2 PPO & Phase 2 DQN+ & random & heuristic & minimax-d4 \\
+\midrule
+\tabinput{report/tables/league_results.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+Fig.~\ref{fig:league_mix} and Table~\ref{tab:league_results} show one clear
+trend: \textbf{no league share beats pure self-play, and DQN gets steadily weaker
+as the league share grows}. Against the self-play models, the low mixes
+($p=0.25$, $0.5$) are statistically tied with self-play: their CIs include 50\%.
+The high mixes ($p=0.75$, $1$) are significantly worse: their CIs lie entirely
+below 50\%. The same downward slope appears against the held-out bots and the
+held-out learned agents. The head-to-head matrix between mixes
+(Fig.~\ref{fig:league_h2h}) tells the same story without involving any outside
+opponent: every lower-$p$ mix scores at least level with, and mostly above, every
+higher-$p$ mix it meets.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.48\linewidth]{report/figures/league_h2h.pdf}
+\caption{Head-to-head between mixes: the row mix's score against the column
+mix, over all 9 seed pairs (1{,}800 games per cell).}
+\label{fig:league_h2h}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/league_best_vs_p0.pdf}
+\caption{Self-play ($p=0$) vs the best league mix ($p=\LeagueBestMix$) against
+every panel opponent; the dashed line separates held-out from in-league
+opponents. Mean over seeds; whiskers: min--max.}
+\label{fig:league_best}
+\end{figure}
+
+\paragraph{Even the training opponents get harder to beat.} The most striking
+result is on the right of Fig.~\ref{fig:league_mix}. Scores against heuristic
+and minimax-d4 \emph{fall} as $p$ grows, even though the high-$p$ learners
+actually play these bots during training. This contradicts our expectation that
+in-league scores would rise. The likely reason is a matter of dose. With
+uniform two-level sampling, a single fixed member such as the heuristic bot
+appears in only $p/16$ of all games, about 6\% even at $p=1$. That is far too
+little to memorise it, in contrast to Phase~1's Monte Carlo learner, which
+played the heuristic bot in every game. In-league scores therefore track the
+learner's general strength, and they fall with it. The random-bot score stays
+flat because every mix beats random almost every game.
+
+\paragraph{Why variety hurts here: the training signal.}
+Fig.~\ref{fig:league_opponents} shows how the learner fared against each
+opponent during training. The league is far from uniformly informative. Half
+of the fixed members (random and the three tabular agents) are beaten about
+90\% of the time almost from the start, while minimax-d4 wins most of its games.
+Games that are nearly certain wins or nearly certain losses carry little
+information about \emph{which} moves made the difference. Only the remaining
+members, and the learner's own snapshots, give evenly matched games. Self-play,
+by construction, gives evenly matched games \emph{every} time: the opponent is
+always exactly as strong as the learner. Replacing self-play games with league
+games therefore lowers the share of informative games, and the learner improves
+more slowly. We attribute the downward trend mainly to this loss of
+matched-strength training signal. This supports H2, and its gradual, monotone
+shape explains why H3's interior peak never appears.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{report/figures/league_opponent_curves.pdf}
+\caption{Training-time score against each opponent over training, for the
+$p=0.5$ mix (mean over 3 seeds; exploring policy, so slightly below greedy
+strength). Dark: the learner wins almost always; light: it almost always
+loses.}
+\label{fig:league_opponents}
+\end{figure}
+
+\paragraph{Replay dilution (H4).} DQN's replay buffer mirrors the mix: the share
+of league data in it equals $p$ (Table~\ref{tab:league_h4}). The checkpoint
+curves (Fig.~\ref{fig:league_ckpt}) show the predicted early lag. League-only
+training starts behind against both held-out opponents. The gap narrows over
+training but does not close. This is \emph{consistent with} dilution: positions
+reached against weak or idiosyncratic opponents are a skewed sample of the
+positions that matter against strong play, so values fitted to them transfer
+poorly. We cannot, however, separate dilution from the simpler explanation that
+high-$p$ runs see fewer self-play games. Both predict the same curves, so H4 is
+only partly supported.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/league_ckpt_curves.pdf}
+\caption{Held-out score of saved checkpoints during training, per mix (mean over
+3 seeds; 200 games per checkpoint and seed). Lighter: lower league share.}
+\label{fig:league_ckpt}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Replay-buffer composition and held-out learning speed. Buffer share:
+fraction of transitions in the replay buffer that came from league games at the
+end of training (mean over seeds). Scores: against minimax-d3 at 50k games and
+at the end (\%).}
+\label{tab:league_h4}
+\small
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+$p$ & Buffer share from league (\%) & vs minimax-d3 at 50k & vs minimax-d3 at 200k \\
+\midrule
+\tabinput{report/tables/league_h4.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Self-play with or without past snapshots.} The pure self-play learner
+here ($p=0$) scores about evenly against Phase~2's DQN+, which played a pool of
+its own past snapshots half the time (Table~\ref{tab:league_results}). Playing
+old versions of itself made no measurable difference to DQN either, so for this
+learner the matched-strength live opponent is what matters.
+
+\paragraph{Verdict on the hypotheses.}
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[H1 (robustness): refuted.] League-trained DQN is no more robust. At low $p$ it is
+        level with self-play against the held-out opponents, and at higher $p$
+        it is weaker against all of them, including the unseen learned agents.
+  \item[H2 (weak signal): supported.] League-only training is significantly
+        worse than self-play. The training-time scores show why: most league
+        games are decided before they start.
+  \item[H3 (best mix): refuted.] Strength falls monotonically with $p$. The low
+        mixes merely tie with self-play.
+  \item[H4 (replay dilution): partly supported.] There is an early lag that
+        narrows over training, but it is confounded with the smaller amount of
+        self-play data.
+\end{description}
+
+\paragraph{Implications and limitations.} For DQN on \bx{6}, variety from
+\emph{weak} opponents is not a substitute for matched-strength self-play. If a
+league is to help, its opponents need to be near the learner's own strength.
+That is exactly what AlphaStar's prioritised fictitious self-play (PFSP)
+arranges, by sampling the opponents the learner currently struggles against. It
+is the natural next variant, and the sampler is already built to swap it in. The
+conclusions are limited to this setting: a weak-only league, uniform sampling,
+one learner and 3 seeds per mix. The minimax-d2 and d3 opponents are only partly
+held out, but the fully unseen PPO and DQN+ agents show the same trend.
+
+%======================================================================
 \section{System Architecture}
 \label{sec:env}
 
@@ -1149,7 +1327,7 @@ a downstream need:
   rather than learn to avoid them.
   \item[Configurable input planes.] The state can be encoded as any subset of
   \{own discs, opponent discs, empty squares, side to move, legal moves\}.
-  The planned input-representation sweep (\S\ref{sec:next}) varies this set without
+  Any future input-representation experiment varies this set without
   touching the environment.
   \item[One agent interface.] Every player implements
   \texttt{act(state)$\to$action}. Bots, learned policies and search agents
@@ -1255,17 +1433,19 @@ the experiments.
 \label{sec:next}
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{A stronger yardstick.} AlphaZero now beats minimax-d4 most of
-        the time, so a stronger reference (minimax at depth 6 or more, or the
-        Edax engine) is needed to keep measuring progress. Saving intermediate
-        checkpoints would let learning curves be measured against it
-        (\S\ref{sec:selfplay}). The same anchor would let every agent be placed
-        on the Elo scale of \S\ref{sec:elo}.
-  \item \textbf{Architecture and search-budget sweep.} Depth, width, input
-        planes, head design and MCTS simulations, varied one at a time and
-        summarised as a strength-versus-compute Pareto plot. This also separates
-        the effect of AlphaZero's convolutional architecture from that of its
-        search-based training signal (\S\ref{sec:selfplay}).
+  \item \textbf{Prioritised league sampling.} Repeat the league experiment of
+        \S\ref{sec:league} with PFSP, so that DQN mostly meets opponents near
+        its own strength. This tests whether variety helps once the training
+        signal is matched.
+  \item \textbf{Exploiters and blind spots.} Train exploiter agents whose only
+        goal is to beat a fixed model such as Oroletto. Then audit every agent's
+        moves with an exact endgame solver to find and categorise its blind
+        spots, and measure how far each model's weaknesses transfer to the
+        others.
+  \item \textbf{Multi-agent co-evolution.} Let several independent agents learn
+        by playing one another, and compare the resulting models with the
+        self-play models: their strength, how exploitable they are, and whether
+        strategies cycle within the population.
   \item \textbf{Scaling to \bx{8}.} Re-tune the rule-based bots for \bx{8}
         (Table~\ref{tab:gate} shows the \bx{6} weights are weaker there) and
         train the selected configuration. Optionally, play matches against the
@@ -1391,9 +1571,6 @@ one.}
 \bibitem{buro1997} M.~Buro. The Othello match of the year: Takeshi Murakami vs.\ Logistello. \emph{ICCA Journal}, 20(3):189--193, 1997.
 \bibitem{campbell2002} M.~Campbell, A.~J. Hoane, and F.-h. Hsu. Deep Blue. \emph{Artificial Intelligence}, 134(1--2):57--83, 2002.
 \bibitem{cs121} Stanford University. CS 121, Handout No.~5, Homework~3: Game-Playing (Othello: the rules). Winter Quarter 1992. \url{https://stacks.stanford.edu/file/druid:bp488cx8853/bp488cx8853.pdf}.
-\bibitem{bradley1952} R.~A. Bradley and M.~E. Terry. Rank analysis of incomplete block designs: I. The method of paired comparisons. \emph{Biometrika}, 39(3/4):324--345, 1952.
-\bibitem{elo1978} A.~E. Elo. \emph{The Rating of Chessplayers, Past and Present}. Arco, 1978.
-\bibitem{hunter2004} D.~R. Hunter. MM algorithms for generalized Bradley--Terry models. \emph{The Annals of Statistics}, 32(1):384--406, 2004.
 \bibitem{schulman2017} J.~Schulman, F.~Wolski, P.~Dhariwal, A.~Radford, and O.~Klimov. Proximal policy optimization algorithms. arXiv:1707.06347, 2017.
 \bibitem{vanhasselt2016} H.~van Hasselt, A.~Guez, and D.~Silver. Deep reinforcement learning with double Q-learning. In \emph{AAAI}, 2016.
 \bibitem{feinstein1993} J.~Feinstein. Amenor wins world 6$\times$6 championships! \emph{British Othello Federation Newsletter}, July 1993.

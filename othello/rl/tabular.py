@@ -8,6 +8,9 @@ unseen entries read as 0.
 """
 from __future__ import annotations
 
+import gzip
+import pickle
+
 from othello.rl.common import Learner
 from othello.symmetry import get_symmetry
 
@@ -103,3 +106,20 @@ class TabularLearner(Learner):
                "update_err_rms": (self._err_sq / n) ** 0.5}
         self._err_n, self._err_sum, self._err_sq = 0, 0.0, 0.0
         return out
+
+    save_name = "table.pkl.gz"
+
+    def save(self, path):
+        """Gzipped pickle of the table (Q values, MC visit counts, visited states)."""
+        with gzip.open(path, "wb", compresslevel=3) as f:
+            pickle.dump({"method": self.method, "alpha": self.alpha, "gamma": self.gamma,
+                         "q": self.q, "visits": self.visits, "states": self.states},
+                        f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def load(cls, env, path, seed=0):
+        with gzip.open(path, "rb") as f:
+            d = pickle.load(f)
+        learner = cls(env, seed, method=d["method"], alpha=d["alpha"], gamma=d["gamma"])
+        learner.q, learner.visits, learner.states = d["q"], d["visits"], d["states"]
+        return learner

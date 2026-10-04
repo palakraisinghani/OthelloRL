@@ -146,7 +146,7 @@ THRESH = {("heuristic", "random"): 0.90, ("minimax-d4", "heuristic"): 0.80}
 
 def gate():
     g = load("baselines/gate.json")
-    out, elo = [], []
+    out = []
     for n, v in g["sizes"].items():
         first = True
         for m in v["matches"]:
@@ -162,33 +162,8 @@ def gate():
             out.append(rf"{size} & {m['a']} vs {m['b']} & {m['games']} & {m['wins']}/{m['draws']}/{m['losses']} & "
                        rf"{pct(m['win_rate'])} & {score_ci(m)} & {m['mean_margin']:+.1f} & {verdict} \\")
         out.append(r"\midrule")
-        e = v["elo"]
-        elo.append(rf"{n}$\times${n} & {e['random']:.0f} & {e['heuristic']:.0f} & {e['minimax-d4']:.0f} \\")
     write("gate.tex", "\n".join(out[:-1]) + "\n")
-    write("elo.tex", "\n".join(elo) + "\n")
-    elo_check(g)
     gate_bars(g)
-
-
-def elo_expected(diff):
-    """Expected score of the higher-rated player for an Elo gap `diff`."""
-    return 1 / (1 + 10 ** (-diff / 400))
-
-
-def elo_check(g):
-    """Does each Elo gap reproduce the observed score of that pairing?"""
-    rows = []
-    for n, v in g["sizes"].items():
-        e = v["elo"]
-        first = True
-        for m in v["matches"]:
-            gap = e[m["a"]] - e[m["b"]]
-            size = rf"{n}$\times${n}" if first else ""
-            first = False
-            rows.append(rf"{size} & {m['a']} vs {m['b']} & {gap:.0f} & {pct(elo_expected(gap))} & "
-                        rf"{score_ci(m)} \\")
-        rows.append(r"\midrule")
-    write("elo_check.tex", "\n".join(rows[:-1]) + "\n")
 
 
 # ordinal blue ramp (steps 250/450/650): board size is ordered, not categorical
@@ -559,6 +534,259 @@ def selfplay():
               + rf"\newcommand{{\OrolettoRun}}{{{Path(d['model']).name}}}" + "\n")
 
 
+# ---------------------------------------------------------------- league (Phase 3)
+LG_MIXES = ["p0", "p25", "p50", "p75", "p100"]
+LG_P = {"p0": 0.0, "p25": 0.25, "p50": 0.5, "p75": 0.75, "p100": 1.0}
+# ordinal ramp for the ordered mix parameter p (blue steps 250..650)
+P_RAMP = {"p0": "#86b6ef", "p25": "#5598e7", "p50": "#2a78d6", "p75": "#1c5cab", "p100": "#104281"}
+HELD = [("p0", "self-play DQN (p=0)"), ("minimax-d2", "minimax-d2"), ("minimax-d3", "minimax-d3"),
+        ("ppo", "Phase 2 PPO"), ("dqn+", "Phase 2 DQN+")]
+INLG = [("random", "random"), ("heuristic", "heuristic"), ("minimax-d4", "minimax-d4")]
+# colour follows the opponent across the whole report: random/heuristic/minimax-d4 keep
+# slots 1-3 (as in every earlier chart); held-out opponents take slots 4-8
+OPP_COLOR = {"random": "#2a78d6", "heuristic": "#eb6834", "minimax-d4": "#1baf7a", "p0": "#eda100",
+             "minimax-d2": "#e87ba4", "minimax-d3": "#008300", "ppo": "#4a3aa7", "dqn+": "#e34948"}
+
+
+def _lg_score(r, key):
+    """Model result dict -> score vs a panel opponent (averaging the seed-level entries)."""
+    if key in ("p0", "ppo", "dqn+"):
+        pref = {"p0": "p0-s", "ppo": "ppo-s", "dqn+": "dqn+-s"}[key]
+        v = [x["score"] for k, x in r.items() if k.startswith(pref)]
+        return sum(v) / len(v)
+    return r[key]["score"]
+
+
+def _boot_vs_p0(ev, mix, n=10_000, seed=0):
+    """Mean score of `mix` vs the p0 models over seed pairs, with a seed-level bootstrap 95% CI."""
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    S = [0, 1, 2]
+    M = {(a, b): ev[f"{mix}/seed{a}"][f"p0-s{b}"]["score"] for a in S for b in S
+         if f"p0-s{b}" in ev[f"{mix}/seed{a}"]}
+    mean = sum(M.values()) / len(M)
+    boots = []
+    for _ in range(n):
+        A, B = rng.choice(S, 3), rng.choice(S, 3)
+        v = [M[(a, b)] for a in A for b in B if (a, b) in M]
+        if v:
+            boots.append(sum(v) / len(v))
+    lo, hi = np.percentile(boots, [2.5, 97.5])
+    return mean, lo, hi
+
+
+def league():
+    import numpy as np
+    ev_path = RES / "league" / "dqn_eval.json"
+    if not ev_path.exists():
+        print("league: no evaluation yet")
+        return
+    ev = json.loads(ev_path.read_text())
+    if not all(f"{m}/seed{s}" in ev for m in LG_MIXES for s in (0, 1, 2)):
+        print("league: evaluation incomplete")
+        return
+    cfg = yaml_load(ROOT / "configs/league_dqn.yaml")
+
+    # ---- league members table (strength from earlier phases: score vs heuristic)
+    g6 = {(m["a"], m["b"]): m for m in load("baselines/gate.json")["sizes"]["6"]["matches"]}
+    ref = {"random": 1 - g6[("heuristic", "random")]["score"], "heuristic": None,
+           "minimax-d4": g6[("minimax-d4", "heuristic")]["score"]}
+    kinds = {"random": "rule-based", "heuristic": "rule-based", "minimax-d4": "rule-based"}
+    rows = []
+    for m in cfg["league_members"]:
+        nm = m["name"]
+        if "path" in m:
+            f = json.loads((ROOT / m["path"] / "final.json").read_text())
+            sc, kind = f["heuristic"]["score"], "traditional RL (Phase 1)"
+        else:
+            sc, kind = ref[nm], kinds[nm]
+        rows.append(rf"{nm} & {kind} & {'--' if sc is None else pct(sc)} \\")
+    rows.append(r"own snapshots & frozen copies of the learner (every 5k games, $\le$20) & varies \\")
+    write("league_members.tex", "\n".join(rows) + "\n")
+
+    # ---- results table
+    boot = {m: _boot_vs_p0(ev, m) for m in LG_MIXES}
+    per = {m: {k: [_lg_score(ev[f"{m}/seed{s}"], k) for s in (0, 1, 2)] for k, _ in HELD[1:] + INLG}
+           for m in LG_MIXES}
+    best = {k: max(np.mean(per[m][k]) for m in LG_MIXES) for k, _ in HELD[1:] + INLG}
+    best_b = max(boot[m][0] for m in LG_MIXES)
+    rows = []
+    for m in LG_MIXES:
+        mean, lo, hi = boot[m]
+        cells = [rf"{LG_P[m]:g}", bold_if(rf"{pct(mean)} [{pct(lo)}, {pct(hi)}]", mean == best_b)]
+        for k, _ in HELD[1:] + INLG:
+            v = per[m][k]
+            cells.append(bold_if(rf"{pct(np.mean(v))} $\pm$ {pct(np.std(v, ddof=1))}", np.mean(v) == best[k]))
+        rows.append(" & ".join(cells) + r" \\")
+    write("league_results.tex", "\n".join(rows) + "\n")
+
+    FIG.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": INK2, "axes.labelcolor": INK,
+                         "xtick.color": INK2, "ytick.color": INK2})
+    xs = [LG_P[m] for m in LG_MIXES]
+
+    # ---- score vs p: held-out (left) and in-league (right)
+    fig, axes = plt.subplots(1, 2, figsize=(6.6, 2.9), sharey=True)
+    for ax, group, title in ((axes[0], HELD, "held-out opponents"), (axes[1], INLG, "in-league opponents")):
+        for j, (k, lab) in enumerate(group):
+            if k == "p0":
+                y = [100 * boot[m][0] for m in LG_MIXES]
+                lo = [100 * (boot[m][0] - boot[m][1]) for m in LG_MIXES]
+                hi = [100 * (boot[m][2] - boot[m][0]) for m in LG_MIXES]
+            else:
+                y = [100 * np.mean(per[m][k]) for m in LG_MIXES]
+                lo = [100 * (np.mean(per[m][k]) - min(per[m][k])) for m in LG_MIXES]
+                hi = [100 * (max(per[m][k]) - np.mean(per[m][k])) for m in LG_MIXES]
+            c = OPP_COLOR[k]
+            ax.errorbar(xs, y, yerr=[lo, hi], color=c, lw=2, marker="o", ms=5, capsize=2,
+                        markeredgecolor="white", markeredgewidth=1, label=lab)
+        ax.axhline(50, color=INK, lw=0.8, ls=":")
+        ax.set_title(title, fontsize=9, color=INK)
+        ax.set_xlabel("league share p")
+        ax.set_xticks(xs)
+        ax.set_ylim(0, 100)
+        _style_axes(ax)
+        if group is HELD:
+            ax.legend(frameon=False, fontsize=6.5, loc="upper right", ncol=2)
+        else:   # empty band between the heuristic (~55%) and minimax-d4 (~15%) lines
+            ax.legend(frameon=False, fontsize=6.5, loc="center right", bbox_to_anchor=(1.0, 0.35))
+    axes[0].set_ylabel("score (%)")
+    fig.tight_layout()
+    fig.savefig(FIG / "league_mix_curve.pdf")
+    plt.close(fig)
+
+    # ---- best mix vs p0 bars
+    best_mix = max(LG_MIXES[1:], key=lambda m: boot[m][0])
+    fig, ax = plt.subplots(figsize=(6.2, 2.8))
+    keys = [(k, lab) for k, lab in HELD[1:] + INLG]
+    x = np.arange(len(keys))
+    w = 0.38
+    for j, (m, c) in enumerate((("p0", P_RAMP["p0"]), (best_mix, P_RAMP["p100"]))):
+        means = [100 * np.mean(per[m][k]) for k, _ in keys]
+        lo = [100 * (np.mean(per[m][k]) - min(per[m][k])) for k, _ in keys]
+        hi = [100 * (max(per[m][k]) - np.mean(per[m][k])) for k, _ in keys]
+        xx = x + (j - 0.5) * (w + 0.02)
+        ax.bar(xx, means, w, color=c, edgecolor="white", linewidth=1, label=f"p = {LG_P[m]:g}")
+        ax.errorbar(xx, means, yerr=[lo, hi], fmt="none", ecolor=INK2, elinewidth=0.9, capsize=2)
+        for xi, mval, h in zip(xx, means, hi):
+            ax.text(xi, mval + h + 1.5, f"{mval:.0f}", ha="center", va="bottom", fontsize=6.5, color=INK2)
+    ax.axvline(len(HELD) - 1.5, color=INK2, lw=0.8, ls="--")
+    ax.text(len(HELD) - 1.45, 103, "in-league →", fontsize=7, color=INK2)
+    ax.axhline(50, color=INK, lw=0.8, ls=":")
+    ax.set_xticks(x)
+    ax.set_xticklabels([lab.replace("Phase 2 ", "P2 ") for _, lab in keys], fontsize=7.5)
+    ax.set_ylabel("final score (%)")
+    ax.set_ylim(0, 110)
+    ax.set_yticks(range(0, 101, 20))
+    _style_axes(ax)
+    ax.legend(frameon=False, ncol=2, loc="upper left", fontsize=7.5)
+    fig.tight_layout()
+    fig.savefig(FIG / "league_best_vs_p0.pdf")
+    plt.close(fig)
+    write("league_meta.tex", rf"\newcommand{{\LeagueBestMix}}{{{LG_P[best_mix]:g}}}" + "\n")
+
+    # ---- head-to-head matrix (row mix vs column mix)
+    hp = RES / "league" / "dqn_h2h_matrix.json"
+    if hp.exists():
+        H = json.loads(hp.read_text())
+        mat = np.full((5, 5), np.nan)
+        for i, ma in enumerate(LG_MIXES):
+            for j, mb in enumerate(LG_MIXES):
+                if i == j:
+                    continue
+                vals = []
+                for k, v in H.items():
+                    a, b = k.split("|")
+                    if a.startswith(ma + "/") and b.startswith(mb + "/"):
+                        vals.append(v["score"])
+                    elif a.startswith(mb + "/") and b.startswith(ma + "/"):
+                        vals.append(1 - v["score"])
+                if vals:
+                    mat[i, j] = 100 * np.mean(vals)
+        from matplotlib.colors import LinearSegmentedColormap
+        cmap = LinearSegmentedColormap.from_list("div", ["#d03b3b", "#f0efec", "#2a78d6"])
+        fig, ax = plt.subplots(figsize=(3.6, 3.0))
+        im = ax.imshow(mat, cmap=cmap, vmin=20, vmax=80)
+        for i in range(5):
+            for j in range(5):
+                if not np.isnan(mat[i, j]):
+                    ax.text(j, i, f"{mat[i, j]:.0f}", ha="center", va="center", fontsize=8, color=INK)
+        lab = [f"{LG_P[m]:g}" for m in LG_MIXES]
+        ax.set_xticks(range(5), lab)
+        ax.set_yticks(range(5), lab)
+        ax.set_xlabel("opponent: league share p")
+        ax.set_ylabel("player: league share p")
+        cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cb.set_label("player's score (%)", fontsize=8)
+        fig.tight_layout()
+        fig.savefig(FIG / "league_h2h.pdf")
+        plt.close(fig)
+
+    # ---- checkpoint curves vs minimax-d3 (H4) + per-mix table
+    cp = RES / "league" / "dqn_ckpt_curves.json"
+    if cp.exists():
+        C = json.loads(cp.read_text())
+        fig, axes = plt.subplots(1, 2, figsize=(6.6, 2.8), sharey=True)
+        h4 = []
+        for m in LG_MIXES:
+            for ax, opp in zip(axes, ("minimax-d3", "ppo-s0")):
+                by = {}
+                for k, v in C.items():
+                    if k.startswith(m + "/"):
+                        by.setdefault(v["games"], []).append(100 * v[opp]["score"])
+                g = sorted(by)
+                ax.plot([x / 1000 for x in g], [np.mean(by[x]) for x in g], color=P_RAMP[m], lw=2,
+                        marker="o", ms=3, label=f"p = {LG_P[m]:g}")
+            # buffer composition at the end of training (mean over seeds)
+            shares = []
+            for sd in (0, 1, 2):
+                rowsc = _curve(RES / "league" / "dqn" / m / f"seed{sd}")
+                shares.append(float(rowsc[-1].get("buffer_league_share", "nan")))
+            early = [100 * v["minimax-d3"]["score"] for k, v in C.items() if k.startswith(m + "/") and v["games"] == 50000]
+            last = [100 * v["minimax-d3"]["score"] for k, v in C.items() if k.startswith(m + "/") and v["games"] == max(x["games"] for x in C.values())]
+            h4.append(rf"{LG_P[m]:g} & {100 * np.mean(shares):.0f} & {np.mean(early):.1f} & {np.mean(last):.1f} \\")
+        for ax, t in zip(axes, ("vs minimax-d3 (held-out)", "vs Phase 2 PPO seed 0 (held-out)")):
+            ax.set_title(t, fontsize=9, color=INK)
+            ax.set_xlabel("training games (thousands)")
+            ax.axhline(50, color=INK, lw=0.8, ls=":")
+            ax.set_ylim(0, 100)
+            _style_axes(ax)
+        axes[0].set_ylabel("score (%)")
+        axes[1].legend(frameon=False, fontsize=6.5, loc="upper left")
+        fig.tight_layout()
+        fig.savefig(FIG / "league_ckpt_curves.pdf")
+        plt.close(fig)
+        write("league_h4.tex", "\n".join(h4) + "\n")
+
+    # ---- training win rate vs each league member over time (p = 0.5, mean over seeds)
+    names = ["self"] + [m["name"] for m in cfg["league_members"]] + ["snapshots"]
+    curves = [_curve(RES / "league" / "dqn" / "p50" / f"seed{sd}") for sd in (0, 1, 2)]
+    L = min(len(c) for c in curves)
+    mat = np.full((len(names), L - 1), np.nan)
+    for i, nm in enumerate(names):
+        for t in range(1, L):
+            vals = [float(c[t][f"vs_{nm}_score"]) for c in curves if c[t][f"vs_{nm}_score"] not in ("", "nan")]
+            if vals:
+                mat[i, t - 1] = 100 * np.mean(vals)
+    from matplotlib.colors import LinearSegmentedColormap
+    seq = LinearSegmentedColormap.from_list("seq", ["#f0efec", "#2a78d6", "#0d366b"])
+    fig, ax = plt.subplots(figsize=(6.4, 2.9))
+    im = ax.imshow(mat, aspect="auto", cmap=seq, vmin=0, vmax=100,
+                   extent=[2.5, 5 * (L - 1) + 2.5, len(names) - 0.5, -0.5])
+    ax.set_yticks(range(len(names)), names, fontsize=7.5)
+    ax.set_xlabel("training games (thousands)")
+    cb = fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02)
+    cb.set_label("training score (%)", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(FIG / "league_opponent_curves.pdf")
+    plt.close(fig)
+
+
+def yaml_load(path):
+    import yaml
+    return yaml.safe_load(Path(path).read_text())
+
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
@@ -573,4 +801,5 @@ if __name__ == "__main__":
         throughput(), tuning(), depth(), gate(), diag(), openings(), meta()
     classical()
     selfplay()
+    league()
     print("wrote", sorted(p.name for p in TAB.iterdir()), sorted(p.name for p in FIG.iterdir()))
