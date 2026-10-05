@@ -1,0 +1,39 @@
+{
+  "minimax-d2": {
+    "win_rate": 0.292,
+    "score": 0.311,
+    "draw_rate": 0.038,
+    "margin": -7.178,
+    "games": 500
+  },
+  "minimax-d3": {
+    "win_rate": 0.176,
+    "score": 0.187,
+    "draw_rate": 0.022,
+    "margin": -13.418,
+    "games": 500
+  },
+  "random": {
+    "win_rate": 0.894,
+    "score": 0.907,
+    "draw_rate": 0.026,
+    "margin": 14.544,
+    "games": 1000
+  },
+  "heuristic": {
+    "win_rate": 0.546,
+    "score": 0.556,
+    "draw_rate": 0.02,
+    "margin": 1.621,
+    "games": 1000
+  },
+  "minimax-d4": {
+    "win_rate": 0.15,
+    "score": 0.162,
+    "draw_rate": 0.024,
+    "margin": -14.268,
+    "games": 500
+  },
+  "games": 50060,
+  "train_seconds": 11653.22733950615
+}

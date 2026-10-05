@@ -20,6 +20,7 @@
 \newcommand{\appref}[1]{\hyperref[#1]{Appendix~\ref*{#1}}}
 \newcommand{\pending}[1]{\noindent\fcolorbox{gray}{gray!8}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small\textbf{Status: training in progress.} #1}}}
 \newcommand{\flag}[1]{\noindent\fcolorbox{red!60!black}{red!5}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small #1}}}
+\newcommand{\question}[1]{\par\medskip\noindent\fcolorbox{blue!55!black}{blue!5}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small\textbf{Point to Ponder.} #1}}\par\medskip}
 
 \input{report/tables/tuning_meta.tex}
 \input{report/figures/rules_meta.tex}
@@ -540,75 +541,67 @@ exactly the same conditions. Only the learning algorithm differs.
 
 \paragraph{Training.}
 \begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
-  \item[Common opponent:] the heuristic bot of \S\ref{sec:heuristic}, with the
+  \item[Common opponent:] The heuristic bot of \S\ref{sec:heuristic}, with the
         tuned weights of Table~\ref{tab:heuristic_weights} and
-        $\varepsilon=0.05$ random moves. It is the same fixed opponent for every
-        method, run and game; nothing else is ever played during training.
-  \item[Training algorithm:] the method being studied
-        (\S\ref{sec:classical_methods}): tabular Q-learning, SARSA, Monte
-        Carlo control, linear function-approximation Q-learning or DQN. Every
-        method runs inside one shared training loop
+        $\varepsilon=0.05$ random moves.
+  \item[Training algorithm:] Every
+        method runs inside one shared training loop.
         (\texttt{othello/rl/common.py}), so they differ only in how they choose
         moves and update their values.
-  \item[Learner's view (state):] the position at each of the learner's own
+  \item[Learner's view (state):] The position at each of the learner's own
         decision points, from the side to move. The opponent's reply is part of
         the environment's transition from $s_t$ to $s_{t+1}$.
   \item[Reward:] $+1$ for a win, $0$ for a draw, $-1$ for a loss, given only at
         the end of the game; every other step gets $0$. There is no discounting
         ($\gamma=1$). (The disc-margin ablation replaces the final reward by the
-        final disc margin.)
-  \item[Exploration:] $\varepsilon$-greedy, with $\varepsilon$ decaying linearly
+        final disc margin.). For Bootstrapping algorithms, reward on intermediate steps is taken to be zero.
+  \item[Exploration:] $\varepsilon$-Greedy, with $\varepsilon$ decaying linearly
         from 0.3 to 0.05 over the first half of training and held at 0.05
         afterwards.
-  \item[Step sizes:] tabular Q-learning and SARSA $\alpha=0.1$; Monte Carlo the
+  \item[Step sizes:] Tabular Q-learning and SARSA $\alpha=0.1$; Monte Carlo the
         sample average $1/N(s,a)$; linear $\alpha=0.01$; DQN as described in
         \S\ref{sec:classical_methods}.
   \item[Games and openings:] \TrainGames{} training games per run. Each game
         starts from a random 6-ply opening drawn from a fixed pool of 20{,}000,
-        and the learner alternates between Black and White every game.
+        and the learner alternates between Black and White every game to eliminate any first move advantages.
   \item[Seeds:] 3 independent runs (seeds 0, 1, 2) per method.
 \end{description}
 
 \paragraph{Evaluation.}
 \begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
-  \item[What is evaluated:] the learner's \emph{greedy} policy: no exploration
-        ($\varepsilon=0$), ties broken at random, and no learning during
-        evaluation games.
-  \item[Learning curves (during training):] every 5{,}000 training games the
+  \item[What is evaluated:] Evaluation begins after training is complete. The learnt model behaves GREEDILY - no exploration.
+        ($\varepsilon=0$), and ties between equally good moves are broken at random.
+  \item[Learning curves (during training):] Every 5{,}000 training games the
         current policy plays 200 games (100 fixed openings, each with both
         colours) against the heuristic bot. The same openings are used at every
         checkpoint and for every method, so all the curves are directly
         comparable. Note that this opponent is the \emph{training} opponent, so
         the curves measure progress against the bot each method is learning
         to beat.
-  \item[Final comparison (after training):] the final policy plays all three
+  \item[Final comparison (after training):] The final policy plays all three
         rule-based bots: 1{,}000 games against random, 1{,}000 against
         heuristic and 500 against minimax-d4 (fewer, because each minimax move
         costs a 4-ply search). These games use a \emph{different} fixed set of
         random 6-ply openings from the learning curves, shared by every method
-        and seed.
-  \item[Why three opponents:] each answers a different question. Random asks
+        and seed. Each final match of 1{,}000 games has a 95\% confidence
+        interval of about $\pm3$ percentage points (about $\pm4$ at 500 games).
+        Across the 3 seeds we report mean $\pm$ standard deviation, and plots
+        show the min--max range across seeds as whiskers or bands.
+  \item[Why three opponents:] Testing the learnt model against each of the three 
+        rule based bots answers a different question. Random asks
         whether the method plays sensible Othello at all. Heuristic asks how
         well it beats the opponent it trained against. Minimax-d4 asks how it
         fares against a much stronger player it never saw. Real playing skill
         should show up against all three, roughly in that order. Beating the
         training opponent while failing against the others signals that the
         method has exploited that one opponent rather than learned the game.
-  \item[Metric:] the \emph{score} $= (\text{wins} + \tfrac12\,\text{draws}) /
+  \item[Metric:] The \emph{score} $= (\text{wins} + \tfrac12\,\text{draws}) /
         \text{games}$, from the learner's side. Each colour is played equally
         often, so the first-move advantage cancels. Win rate and mean disc
         margin are also recorded.
-  \item[Uncertainty:] each final match of 1{,}000 games has a 95\% confidence
-        interval of about $\pm3$ percentage points (about $\pm4$ at 500 games).
-        Across the 3 seeds we report mean $\pm$ standard deviation, and plots
-        show the min--max range across seeds as whiskers or bands.
-  \item[Extra diagnostics:] for the tabular methods, the fraction of evaluation
-        positions already present in the table (\emph{coverage}) and the
-        variance of their update targets. For the linear method, the learned
-        feature weights.
 \end{description}
-
-\subsection{Results}
+\newpage
+\subsection{Results from the 5 traditional models}
 \label{sec:classical_results}
 \subsubsection{Comparison against the three rule-based bots}
 
@@ -626,44 +619,40 @@ seed; against minimax-d4 it is 500.}
 \centering
 \caption{Final evaluation of the traditional methods (mean $\pm$ std over
 seeds, \%). ``Win vs heur.'' is the raw win rate against the training opponent.
-``Train'' is the wall-clock hours per run on one CPU core. The reference row is
-the heuristic bot's own result from the rule-based round robin
-(Table~\ref{tab:gate}). Bold: best per column.}
+}
 \label{tab:classical}
 \small
-\begin{tabular}{@{}lcllllr@{}}
+\begin{tabular}{@{}lcllll@{}}
 \toprule
-& & \multicolumn{3}{c}{Score vs.\ (\%)} & & \\
+& & \multicolumn{3}{c}{Score vs.\ (\%)} & \\
 \cmidrule(lr){3-5}
-Method & Seeds & random & heuristic & minimax-d4 & Win vs heur. & Train (h) \\
+Method & Seeds & random & heuristic & minimax-d4 & Win vs heur. \\
 \midrule
 \tabinput{report/tables/classical.tex}
 \bottomrule
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:classical_bars} and Table~\ref{tab:classical} separate the
-methods into three tiers. The tabular TD methods (Q-learning and SARSA) never
+\noindent\textbf{Observations}\\
+\begin{itemize}
+      \item The tabular TD methods (Q-learning and SARSA) never
 leave random play: they draw level with the random bot and lose almost every game
-to the other two. Linear function approximation reaches the strength of the
+to the other two.
+      \item Linear function approximation reaches the strength of the
 heuristic bot: it scores about as well as the heuristic does against random,
 breaks even against the heuristic, and loses to minimax-d4 by a similar margin.
-DQN is the strongest method on \emph{all three} opponents, and is the only one
-that clearly beats its training opponent while still dominating random play.
-
-Monte Carlo control does not fit this ordering. It beats the heuristic bot it was
+      \item DQN is the strongest method on \emph{all three} opponents, and is the only one
+that clearly beats its training opponent while still dominating random play. It does not do too well against minimax-d4.
+      \item Monte Carlo control does not fit this ordering. It beats the heuristic bot it was
 trained against, yet against the \emph{random} bot it does no better than a coin
 flip. A policy that had learned to play Othello would find the random bot the
 easiest of the three opponents. MC control instead does well only against the
 one opponent it has seen. We call this \emph{overfitting to the training
 opponent}: a policy that exploits the specific habits of one opponent instead of
-learning the game. Evaluating against the training opponent alone would have
-ranked MC control among the best methods. The three-bot comparison is what
-exposes it. No method comes close to minimax-d4. Every one of them chooses moves
-without lookahead, and none overcomes the horizon effect that already limited
-the one-ply heuristic bot (\S\ref{sec:bots}).
+learning the game. 
+\end{itemize}
 
-\subsubsection{Learning dynamics}
+\subsubsection*{Learning dynamics}
 
 \begin{figure}[H]
 \centering
@@ -677,13 +666,9 @@ Q-learning and SARSA overlap almost exactly.}
 The curves in Fig.~\ref{fig:classical_curves} show three different failure modes.
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{Flat at the bottom (Q-learning, SARSA).} No measurable
-        improvement over the whole budget.
-  \item \textbf{Immediate plateau (linear FA).} Reaches parity within the first
-        evaluation interval and then does not move. Additional data does not
-        help.
-  \item \textbf{Slow, steady climb (MC control, DQN).} Both are still rising
-        at the end of the budget, MC control from a much lower start.
+  \item \text{Flat at the bottom (Q-learning, SARSA).} 
+  \item \text{Immediate plateau (linear FA).} 
+  \item \text{Slow, steady climb (MC control, DQN).}
 \end{itemize}
 
 \subsubsection{Why the tabular methods fail}
@@ -708,51 +693,36 @@ Method & States ($10^6$) & vs heuristic & vs random & first 5k & last 5k \\
 \end{tabular}
 \end{table}
 
-\paragraph{The curse of dimensionality.} Table~\ref{tab:tabular} shows the
-mechanism directly. After \TrainGames{} games each table holds between one and two million
-canonical positions, yet in games against the random bot fewer than one in ten
-of the positions the learner meets are in its table. A lookup table has no notion of
-similarity between positions, so a position it has not seen is a position it
-knows nothing about, and it falls back to an arbitrary choice. This is the
-\emph{curse of dimensionality} in its plainest form: the number of reachable
+\paragraph{The curse of dimensionality.}
+The number of reachable
 positions is so large that a table cannot be filled from any feasible amount of
-play. It is the same even after merging the 8 board symmetries. Coverage is
+play. After \TrainGames{} games each table holds between one and two million
+canonical positions, yet in games against the random bot fewer than one in ten
+of the positions the learner meets are in its table. Coverage is
 markedly higher against the heuristic bot, because a mostly deterministic
 opponent keeps leading the game back into the same lines. That difference is
 what MC control exploits.
 
 \paragraph{Why Q-learning and SARSA are indistinguishable.} The two update rules
 differ only in which next-state entry they bootstrap from: the greedy one or the
-one actually taken. A unit test confirms they produce different targets when the
-next state's entries exist (\texttt{tests/test\_rl.py}). In practice the next
+one actually taken. In practice the next
 state is usually unvisited, so both entries read the default value of zero, the
-two targets coincide and the learners behave the same. We attribute the TD
-methods' failure to
-\emph{bootstrapping} under sparse revisits. A one-step target $r+\gamma
-Q(s',\cdot)$ only carries information backwards one move per visit. The final
-reward therefore has to travel back through many revisits of the same line before
-it reaches early positions, and almost no line is revisited that often.
+two targets coincide and the learners behave the same. 
 
-\paragraph{Why MC control behaves differently.} MC control does not bootstrap.
-After every game it moves \emph{all} visited entries straight toward the actual
-outcome, so a single winning game against the heuristic bot marks every position
-on that line as good at once. Against a nearly deterministic opponent, starting
+\paragraph{Why MC control behaves differently.} MC control does not bootstrap. Against a nearly deterministic opponent, starting
 from a bounded set of openings, the same lines come back often enough for these
 marks to accumulate. Its coverage against the heuristic bot rises together with
 its score. It is effectively memorising a growing book of winning lines against
 \emph{that one bot}. Coverage against the random bot stays low, which is why the
 memorised book is useless there. The price of not bootstrapping is
-\emph{variance}. Each MC target is a single, noisy game outcome, and its
-update-error variance is several times that of the TD methods. That variance is
+\emph{variance}.  That variance is
 the bias--variance trade-off in action: unbiased targets, but slow and noisy
 progress, consistent with its slow climb in Fig.~\ref{fig:classical_curves}.
 
 \flag{\textbf{Design note.} We added the heuristic bot's $\varepsilon$-randomness
 and the random openings specifically to stop a tabular learner from memorising
 lines against it (\S\ref{sec:bots}). This was \emph{not sufficient}. MC control
-still found enough repetition to exploit. Any future result measured only
-against the training opponent should be treated with suspicion. The curve
-was still rising at the end of the budget, and we expect, but have not tested,
+still found enough repetition to exploit. I expect, but have not tested,
 that longer training would increase this exploitation without improving play
 against other opponents.}
 
@@ -760,78 +730,29 @@ against other opponents.}
 The linear learner \emph{generalises}: two positions with similar features get
 similar values whether or not either was seen. That is why it beats the random
 bot as convincingly as the heuristic bot does, after almost no training. But it
-reaches its ceiling almost immediately and stays there. Its features are
-essentially the heuristic bot's own features plus edge stability, so the best
+reaches its ceiling almost immediately and stays there. The best
 policy it can represent is a re-weighted one-ply heuristic. Learning finds those
-weights within a few thousand games, and the learned weights reproduce the
-ordering found by the weight search (\appref{app:heuristic}): corners first, then mobility, with disc count near
-zero (Table~\ref{tab:ablation}). This is a \emph{capacity} or
+weights within a few thousand games. This is a \emph{capacity} or
 \emph{inductive-bias} limit rather than a data limit. The model class itself
 contains nothing better than the heuristic, so more games cannot help.
 
 \subsubsection{Why DQN is the strongest, and still loses to search}
 DQN combines the two missing ingredients. It generalises across positions like
 the linear model, but it learns its own features from raw disc planes instead of
-being restricted to hand-chosen ones. Replay lets each game be learned from many
+being restricted to hand-chosen ones. Furthermore it is more expressive in policy 
+than a linear model. Replay lets each game be learned from many
 times, and the target network keeps the bootstrapped targets stable while it
 does. The result is the only method that improves on the heuristic bot without
 losing generality. It still chooses each move from a single forward pass, with no
 lookahead. Minimax-d4 punishes exactly the tactical oversights a one-ply policy
 cannot see, which is why DQN loses heavily to it. Its curve is still rising, so a
-longer run would likely help somewhat. However, closing the gap to search is the
-job of the self-play and MCTS methods in \S\ref{sec:next}, not of more DQN
-training.
+longer run would likely help somewhat. 
 
-\subsubsection{The disc-count ablation}
+\question{Is the DQN model limited by the strength of its fixed training opponent,
+the heuristic bot? \S\ref{sec:frozen} tests this directly by training the
+same DQN against weaker and stronger fixed opponents, and against itself.}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\linewidth]{report/figures/classical_ablation_bars.pdf}
-\caption{Disc-count ablation for linear function approximation. Same format as
-Fig.~\ref{fig:classical_bars}.}
-\label{fig:ablation}
-\end{figure}
-
-\begin{table}[H]
-\centering
-\caption{Disc-count ablation (mean $\pm$ std over 3 seeds, \%), with the learned
-weights (mean over seeds) on the scaled disc, mobility and corner features.}
-\label{tab:ablation}
-\small
-\begin{tabular}{@{}llllrrr@{}}
-\toprule
-& \multicolumn{3}{c}{Score vs.\ (\%)} & \multicolumn{3}{c}{Learned weight} \\
-\cmidrule(lr){2-4}\cmidrule(l){5-7}
-Variant & random & heuristic & minimax-d4 & disc & mob. & corner \\
-\midrule
-\tabinput{report/tables/classical_ablation.tex}
-\bottomrule
-\end{tabular}
-\end{table}
-
-Fig.~\ref{fig:ablation} and Table~\ref{tab:ablation} separate two versions of
-the disc-count trap.
-\begin{itemize}[leftmargin=*]
-  \item \textbf{Disc-count \emph{features}: the trap is reproduced.} Removing
-        the disc feature changes nothing, and the full model learns to give it
-        essentially zero weight. A learner restricted to disc count \emph{only}
-        collapses to the strength of the disc-greedy bot from the tuning study
-        (\appref{app:heuristic}),
-        barely above random. Disc count simply does not carry the information
-        needed to play well. The learner rediscovers what the rule-based
-        tuning found (\appref{app:heuristic}).
-  \item \textbf{Disc-count \emph{reward}: no measurable harm.} Rewarding the
-        final disc margin instead of the win leaves strength unchanged on all
-        three opponents. This \emph{contradicts} the expectation in our original
-        plan. We attribute it to the features. With corner and mobility features
-        available, the positions that maximise the final margin are the same
-        ones that maximise the chance of winning, so the two objectives agree.
-        The learned weights only shrink in scale, as the smaller reward range
-        would predict, and keep their ordering. The trap lies in valuing discs
-        \emph{during} the game, which the features control, not in scoring them
-        at the \emph{end}, which is all the reward does.
-\end{itemize}
-
+\newpage
 %======================================================================
 \section{Self-Play Methods}
 \label{sec:selfplay}
@@ -845,6 +766,148 @@ is needed during training. This section compares three self-play methods on
 and protocol as before. The heuristic bot is now used \emph{only} for
 evaluation and is never trained against. The strongest agent becomes the
 project's final model, \textit{Oroletto}.
+
+\subsection{Why self-play? The frozen target of a fixed opponent}
+\label{sec:frozen}
+
+The \emph{Point to Ponder} in \S\ref{sec:classical} asked whether DQN is held
+back by its fixed training opponent. Before turning to self-play methods, we
+test this directly.
+
+\paragraph{Design.} We train three Double DQNs that are identical to the
+self-play DQN used later in this report (same network, replay buffer,
+exploration schedule and budget). The only difference is their training
+opponent: the random bot, the heuristic bot, or minimax at depth~3, one fixed
+opponent each for the whole run. We compare them with two references trained
+under the same conditions: the \emph{self-play} DQN, whose opponent is its own
+live copy (\S\ref{sec:league}, $p=0$), and Phase~1's classical (vanilla) DQN,
+which was also trained only against the heuristic bot. Every learner gets
+\TrainGames{} games and 3 seeds.
+
+The learners are compared in three ways:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Trainer curves:} each fixed-opponent learner's saved checkpoints
+        (50k, 100k, 150k and 200k games) play its own trainer and the other
+        fixed bots;
+  \item \textbf{Bot panel:} every final model plays all the rule-based bots;
+  \item \textbf{Round robin:} the five learner groups play each other, over all
+        9 seed pairs per group pair.
+\end{itemize}
+
+\paragraph{Hypotheses.} We frame the question as a \emph{frozen target}. A
+fixed opponent never improves, so once the learner beats it reliably, almost
+every game is a win that carries little information, and learning stalls.
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[(a) Frozen target:] each learner's score against its own trainer rises
+        and then plateaus, and its general strength stops improving.
+  \item[(b) Ordering:] strength follows the trainer, random $<$ heuristic $<$
+        minimax-d3.
+  \item[(c) Self-play:] the self-play DQN matches or beats every fixed-opponent
+        DQN.
+\end{description}
+The strict reading of the question, that a learner is \emph{capped} at its
+opponent's strength, is already contradicted by Phase~1: the classical DQN
+trained only against the heuristic bot beats it 65\% of the time.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/fo_trainer_curves.pdf}
+\caption{Trainer curves: each fixed-opponent learner's checkpoints against its
+own trainer (thick solid line) and against the other fixed bots (dashed). Mean
+over 3 seeds, 200 games per checkpoint and seed.}
+\label{fig:fo_trainer}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/fo_curves.pdf}
+\caption{General strength during training: score against minimax-d2, which none
+of the three learners trains against (mean over 3 seeds; band: min--max). The
+dashed line is the self-play DQN's final score.}
+\label{fig:fo_d2}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Final score of each learner against the rule-based bots (\%, mean
+$\pm$ std over 3 seeds). $^\dagger$\,underlined: the learner's own training
+opponent. Bold: best per column.}
+\label{tab:fo_panel}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llllll@{}}
+\toprule
+Learner & random & heuristic & minimax-d2 & minimax-d3 & minimax-d4 \\
+\midrule
+\tabinput{report/tables/fo_panel.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\linewidth]{report/figures/fo_h2h.pdf}
+\caption{Round robin between the learners: the row learner's score against the
+column learner, over all 9 seed pairs (1{,}800 games per cell). Blue: the row
+wins; red: it loses.}
+\label{fig:fo_h2h}
+\end{figure}
+
+\paragraph{The frozen target is clearest at the weak end.} The learner trained
+against the random bot reaches its final level against random within the first
+checkpoint and then stays flat (Fig.~\ref{fig:fo_trainer}). Its general
+strength flatlines even earlier: against minimax-d2 it stops improving after
+roughly 20k games and stays far below every other learner (Fig.~\ref{fig:fo_d2}).
+This is the frozen target in its plainest form. Against random, almost every
+game is an easy win, so the games stop saying anything about which moves
+matter. The heuristic-trained learner is in the middle: it still improves
+against its trainer, but slowly, and its general strength flattens over the
+second half of training. The learner trained against minimax-d3 is still
+improving at 200k games, both against its trainer and in general. It still
+loses most of its training games, so each game still carries information. Our
+strongest fixed opponent is therefore not yet strong enough to show the other
+end of the problem: an opponent so strong that the learner almost never wins.
+
+\paragraph{The bot panel and head-to-head play disagree.} Against the
+rule-based bots (Table~\ref{tab:fo_panel}), strength follows the trainer as
+predicted, and the minimax-d3 learner is the best fixed-opponent learner
+against minimax-d2 and d3 (all of them are about level against minimax-d4). Head-to-head (Fig.~\ref{fig:fo_h2h}), the picture
+changes. The minimax-d3 learner only draws level with the heuristic-trained
+learner, and \emph{both} lose clearly to the self-play DQN. We attribute this to
+a shared family of opponents. Minimax at depths 2 and 3 and the heuristic bot
+all use the same evaluation function, so a learner trained against one of them
+specialises in beating that \emph{style} of play. The panel measures exactly
+that style, which inflates its score. Against other \emph{learned} agents,
+which play differently, the advantage disappears. This is the same pattern as
+Monte Carlo control in \S\ref{sec:classical}, in a milder form: training
+against a fixed opponent teaches the learner that opponent.
+
+\paragraph{Self-play generalises.} The self-play DQN never meets a rule-based
+bot in training. It is not the best against the minimax family, where the
+minimax-d3 learner has home advantage, but it beats \emph{every} fixed-opponent
+learner head-to-head. That includes Phase~1's classical DQN and the learner
+trained against the strongest bot. Its opponent is always exactly as strong as
+itself and keeps improving, so it never runs out of informative games and
+never specialises in one style. The Double DQN trained against the heuristic
+bot and the classical (vanilla) DQN with the same opponent are statistically
+tied head-to-head. The DQN variant makes no difference here; the opponent does.
+
+\paragraph{Verdict.}
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[(a) Frozen target: supported.] It holds clearly for the random and
+        heuristic opponents. With minimax-d3 the target was not yet ``beaten''
+        within 200k games.
+  \item[(b) Ordering: partly supported.] It holds against the bots. Head-to-head
+        the order is random $<$ heuristic $\approx$ minimax-d3.
+  \item[(c) Self-play: supported] in head-to-head play against every
+        fixed-opponent learner. On the bot panel, the minimax-d3 learner is
+        ahead against minimax-d2 and d3, the bots it resembles.
+\end{description}
+\noindent So the answer to the Point to Ponder is \emph{yes, but not as a hard
+cap}. A fixed opponent limits a learner by freezing its learning target and
+narrowing what it learns to that opponent's style. Self-play removes both
+limits, because the opponent improves with the learner. This motivates the
+self-play methods studied in the rest of this section.
 
 \subsection{The methods}
 
@@ -1298,6 +1361,194 @@ one learner and 3 seeds per mix. The minimax-d2 and d3 opponents are only partly
 held out, but the fully unseen PPO and DQN+ agents show the same trend.
 
 %======================================================================
+\section{Co-Evolution vs Self-Play}
+\label{sec:coevo}
+
+\S\ref{sec:league} showed that a league of \emph{weak, fixed} opponents makes DQN
+worse. That experiment changed two things at once, though: it added variety,
+and it made most games lopsided. This section separates the two. Several
+\emph{independent} DQN agents learn only by playing each other, so the
+opponents are varied but always adaptive and of similar strength. Is a
+population of co-evolving learners better than a single learner playing
+itself?
+
+\subsection{Design}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Population:} $N\in\{2,4,8\}$ Double DQNs, identical to the
+        self-play DQN of \S\ref{sec:league} ($p=0$). Each has its own network,
+        replay buffer, optimiser and seed.
+  \item \textbf{Pairing:} each game pairs two \emph{different} members chosen
+        uniformly at random. No member ever plays a copy of itself. Both
+        members learn from their own moves, so one game trains two learners.
+        Each member's exploration schedule runs on its own game count.
+  \item \textbf{Budget}, compared two ways:
+        \textbf{F1}, equal games per agent: every member plays \TrainGames{}
+        games, like the self-play DQN.
+        \textbf{F2}, equal total games: the whole population shares one
+        self-play run's 200{,}000 games, so 100k games per member at $N=4$
+        and 50k at $N=8$ ($N=2$ is the same under F1 and F2).
+  \item \textbf{Evaluation:} the same held-out panel as \S\ref{sec:league}.
+        Every member plays the three self-play DQN seeds head-to-head and the
+        Phase~2 PPO and DQN+ agents (200 games per pairing), and the minimax
+        bots (from its end-of-training evaluation). The \emph{average member} is
+        the main measure, with a seed-level bootstrap 95\% CI. The \emph{best
+        member} of each population is chosen using games inside the population
+        only, never test results, so picking the luckiest of $N$ cannot
+        inflate it.
+  \item \textbf{Diversity:} the fraction of 1{,}000 fixed positions on which two
+        agents would choose different moves, averaged over member pairs. Its
+        baseline is the same measure between the three \emph{independent}
+        self-play seeds: separate training runs already differ.
+  \item \textbf{Non-transitivity:} inside each population of $N\ge3$, the
+        number of rock--paper--scissors cycles (A beats B, B beats C, C beats
+        A) in which every win is statistically significant.
+\end{itemize}
+
+\paragraph{Hypotheses} (stated before the runs):
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[H1:] at equal games per agent, members are about level with self-play.
+  \item[H2:] matched-strength variety does \emph{not} show \S\ref{sec:league}'s
+        decline.
+  \item[H3:] members differ from each other more than independent self-play
+        seeds do.
+  \item[H4:] any gain is largest against unseen \emph{learned} agents.
+  \item[H5:] Othello is largely transitive, so there are few or no
+        significant cycles.
+  \item[H6:] larger populations are more diverse but learn more slowly early
+        on.
+  \item[H7:] at equal total games, training two learners per game partly
+        offsets the split budget at $N=4$.
+\end{description}
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\caption{Co-evolution vs self-play (\%, 3 population seeds each). ``vs self-play''
+is the average member's score against the three self-play DQN seeds, with a
+bootstrap 95\% CI. ``Best'': the best member of each population, chosen using
+games inside the population only. Diversity: share of positions on which two
+members choose different moves. The reference row is the self-play DQN itself.}
+\label{tab:coevo}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrllllllll l@{}}
+\toprule
+& & & \multicolumn{2}{c}{vs self-play} & \multicolumn{2}{c}{Phase 2 agents} & \multicolumn{4}{c}{Rule-based bots} & \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-11}
+Budget & $N$ & Games/agent & average [CI] & best & PPO & DQN+ & d2 & d3 & heuristic & d4 & Diversity \\
+\midrule
+\tabinput{report/tables/coevo_results.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/coevo_bars.pdf}
+\caption{Average population member against the self-play DQN (with bootstrap
+95\% CI) and the held-out opponents, per configuration. The leftmost group is
+the self-play DQN itself (its score against itself is 50 by definition).}
+\label{fig:coevo_bars}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/coevo_ckpt.pdf}
+\caption{Strength against training games \emph{per agent}: average member's
+checkpoints against minimax-d3, for every configuration and for the self-play
+DQN (3 seeds each; 200 games per checkpoint).}
+\label{fig:coevo_ckpt}
+\end{figure}
+
+\paragraph{At equal experience, co-evolution and self-play are
+indistinguishable.} Under F1, the average member ties the self-play DQN at
+every population size: all three CIs include 50\% (Table~\ref{tab:coevo}). The
+\emph{best} member of a population is no stronger either. Against the held-out
+learned agents and the minimax bots, members and self-play are within a
+point or two of each other. Fig.~\ref{fig:coevo_ckpt} shows the reason most
+clearly. Plotted against games \emph{per agent}, the learning curves of all five
+configurations and of self-play lie on top of each other, throughout training.
+A member's strength depends on how many games \emph{it} has played, not on who
+it played them against.
+
+\paragraph{Splitting the budget costs exactly what it saves.} Under F2, members
+are significantly weaker than self-play, more so at $N=8$. They are not weaker
+than the self-play DQN was \emph{at the same number of games}, though: F2
+members simply stop earlier on the shared curve of Fig.~\ref{fig:coevo_ckpt}.
+That one game trains two learners does not help any single learner. Each still
+learns only from its own moves, so sharing a fixed budget among $N$ agents gives
+each of them less experience and nothing in return.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\linewidth]{report/figures/coevo_diversity.pdf}
+\caption{Policy diversity: share of 1{,}000 fixed positions on which two members
+of a population choose different moves (dots: population seeds; bar: mean).
+Dashed: the same measure between the three independent self-play seeds.}
+\label{fig:coevo_div}
+\end{figure}
+
+\paragraph{Populations are not more diverse, and do not cycle.} Members of a
+population disagree with each other about as often as three independently
+trained self-play DQNs do (Fig.~\ref{fig:coevo_div}). Most of the
+disagreement is therefore just run-to-run variation, which every training run
+has, rather than something co-evolution creates. Inside the populations, almost
+no pair of members differs significantly in strength (Table~\ref{tab:coevo_cycles}):
+the members end up as equals. With so few significant wins, rock--paper--scissors
+cycles cannot form, and none do. This is consistent with Othello being largely
+transitive, but these flat populations make it a weak test of that question.
+
+\begin{table}[H]
+\centering
+\caption{Non-transitivity inside populations ($N\ge3$, summed over 3 seeds; 200
+games per member pair). A significant win is one whose 95\% CI excludes 50\%.}
+\label{tab:coevo_cycles}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Budget & $N$ & Member pairs & Significant wins & Significant 3-cycles \\
+\midrule
+\tabinput{report/tables/coevo_cycles.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Why co-evolution changes nothing here.} We attribute the null result
+to the population being \emph{homogeneous}. Every member runs the same
+algorithm, with the same network, hyperparameters and budget. A peer is then
+statistically just another sample of the self-play agent, at the same strength
+and with the same style up to run-to-run noise, which the diversity measure
+confirms. Playing it gives much the same training signal as playing one's own
+live copy. Combined with \S\ref{sec:league}, this pins down what hurt there:
+\emph{weak, mismatched} opponents, not variety as such. Variety from
+evenly matched peers is harmless. It just isn't helpful when the peers are
+copies of the same recipe.
+
+\paragraph{Verdict on the hypotheses.}
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[H1 supported:] members are level with self-play at every $N$.
+  \item[H2 supported:] no decline, so \S\ref{sec:league}'s loss came from
+        mismatched opponents.
+  \item[H3 refuted:] members are no more diverse than independent self-play
+        seeds.
+  \item[H4 not supported:] there is no measurable gain against any held-out
+        opponent.
+  \item[H5 consistent:] there are no significant cycles, but the members are
+        nearly equal, so the test is weak.
+  \item[H6 refuted:] population size changes neither diversity nor learning
+        speed.
+  \item[H7 refuted:] training two learners per game does not offset a split
+        budget; each member's strength follows its own game count.
+\end{description}
+
+\paragraph{Implication.} For co-evolution to beat self-play, the population
+needs members that are genuinely \emph{different}: heterogeneous algorithms,
+different objectives, or dedicated exploiters whose job is to find and punish
+weaknesses, as in AlphaStar's league. The last of these is exactly what the
+next phase studies: exploiter agents and the blind spots they reveal.
+
+%======================================================================
 \section{System Architecture}
 \label{sec:env}
 
@@ -1441,11 +1692,7 @@ the experiments.
         goal is to beat a fixed model such as Oroletto. Then audit every agent's
         moves with an exact endgame solver to find and categorise its blind
         spots, and measure how far each model's weaknesses transfer to the
-        others.
-  \item \textbf{Multi-agent co-evolution.} Let several independent agents learn
-        by playing one another, and compare the resulting models with the
-        self-play models: their strength, how exploitable they are, and whether
-        strategies cycle within the population.
+        others, including the co-evolved population models.
   \item \textbf{Scaling to \bx{8}.} Re-tune the rule-based bots for \bx{8}
         (Table~\ref{tab:gate} shows the \bx{6} weights are weaker there) and
         train the selected configuration. Optionally, play matches against the

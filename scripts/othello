@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 # Launcher for the `othello` terminal game; install with:  ln -sf "$PWD/scripts/othello" ~/.local/bin/othello
 REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m othello "$@"
+PY="$REPO/.venv/bin/python"; [ -x "$PY" ] || PY=python3   # project venv (has torch) if present
+PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m othello "$@"

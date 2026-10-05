@@ -1,0 +1,145 @@
+{
+  "run": "vs-heuristic",
+  "out": "results/fixed_opponent",
+  "board_size": 6,
+  "train_games": 200000,
+  "eval_every": 5000,
+  "eval_openings": 100,
+  "final_eval_openings": 500,
+  "opening_plies": 6,
+  "eval_seed": 4242,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "eps_start": 0.3,
+  "eps_end": 0.05,
+  "eps_decay_frac": 0.5,
+  "checkpoint_every": 50000,
+  "opponent": {
+    "type": "minimax",
+    "kwargs": {
+      "depth": 2,
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      }
+    }
+  },
+  "final_opponents": {
+    "random": {
+      "type": "random"
+    },
+    "heuristic": {
+      "type": "heuristic",
+      "kwargs": {
+        "epsilon": 0.05,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "minimax-d2": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 2,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "minimax-d3": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 3,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "minimax-d4": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 4,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    }
+  },
+  "runs": {
+    "vs-random": {
+      "learner": "dqn",
+      "kwargs": {
+        "double": true
+      },
+      "train_opponent": {
+        "type": "random"
+      }
+    },
+    "vs-heuristic": {
+      "learner": "dqn",
+      "kwargs": {
+        "double": true
+      },
+      "train_opponent": {
+        "type": "heuristic",
+        "kwargs": {
+          "epsilon": 0.05,
+          "weights": {
+            "disc": 1,
+            "mobility": 5,
+            "corner": 50,
+            "xsquare": -25
+          }
+        }
+      }
+    },
+    "vs-minimax-d3": {
+      "learner": "dqn",
+      "kwargs": {
+        "double": true
+      },
+      "train_opponent": {
+        "type": "minimax",
+        "kwargs": {
+          "depth": 3,
+          "weights": {
+            "disc": 1,
+            "mobility": 5,
+            "corner": 50,
+            "xsquare": -25
+          }
+        }
+      }
+    }
+  },
+  "seed": 0,
+  "train_opponent": {
+    "type": "heuristic",
+    "kwargs": {
+      "epsilon": 0.05,
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      }
+    }
+  }
+}

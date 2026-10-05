@@ -12,6 +12,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys  # noqa: E402
+sys.path.insert(0, str(ROOT))
 RES = ROOT / "results"
 TAB = ROOT / "report" / "tables"
 FIG = ROOT / "report" / "figures"
@@ -299,8 +301,7 @@ def classical():
             m, sd = _ms([r["final"][o]["score"] for r in have[k]])
             cells.append(bold_if(rf"{pct(m)} $\pm$ {pct(sd)}", m == best[o]))
         wr, _ = _ms([r["final"]["heuristic"]["win_rate"] for r in have[k]])
-        hours, _ = _ms([r["final"]["train_seconds"] / 3600 for r in have[k]])
-        cells += [pct(wr), f"{hours:.1f}"]
+        cells.append(pct(wr))
         rows.append(" & ".join(cells) + r" \\")
     # reference row: the heuristic bot itself, from the rule-based round robin
     g6 = {(m["a"], m["b"]): m for m in load("baselines/gate.json")["sizes"]["6"]["matches"]}
@@ -308,7 +309,7 @@ def classical():
     h_m = g6[("minimax-d4", "heuristic")]
     rows.append(r"\midrule")
     rows.append(rf"\textit{{Heuristic bot (reference)}} & -- & {pct(h_r['score'])} & -- & "
-                rf"{pct(1 - h_m['score'])} & -- & -- \\")
+                rf"{pct(1 - h_m['score'])} & -- \\")
     write("classical.tex", "\n".join(rows) + "\n")
 
     # ---- grouped bar chart: every method vs the 3 rule-based bots
@@ -782,6 +783,397 @@ def league():
     plt.close(fig)
 
 
+# ------------------------------------------------- fixed-opponent ceiling (Step 2.9)
+FO_GROUPS = [("dqn-random", "vs-random", "DQN trained vs random"),
+             ("dqn-heuristic", "vs-heuristic", "DQN trained vs heuristic"),
+             ("dqn-minimax-d3", "vs-minimax-d3", "DQN trained vs minimax-d3"),
+             ("dqn-selfplay", None, "DQN trained by self-play"),
+             ("dqn-classical", "classical", "classical DQN (Phase 1, vs heuristic)")]
+FO_BOTS = [("random", "random"), ("heuristic", "heuristic"), ("minimax-d2", "minimax-d2"),
+           ("minimax-d3", "minimax-d3"), ("minimax-d4", "minimax-d4")]
+FO_TRAINER = {"dqn-random": "random", "dqn-heuristic": "heuristic", "dqn-minimax-d3": "minimax-d3",
+              "dqn-classical": "heuristic"}
+
+
+def _fo_dir(g, run, seed):
+    if run is None:
+        return RES / "league/dqn/p0" / f"seed{seed}"
+    if run == "classical":
+        return RES / "classical/dqn" / f"seed{seed}"
+    return RES / "fixed_opponent" / run / f"seed{seed}"
+
+
+def _fo_final(g, run, seed):
+    """final.json of a learner; the Phase 1 classical DQN gets its d2/d3 results from classical_panel.json."""
+    f = json.loads((_fo_dir(g, run, seed) / "final.json").read_text())
+    if run == "classical":
+        pn = json.loads((RES / "fixed_opponent" / "classical_panel.json").read_text())
+        for b in ("minimax-d2", "minimax-d3"):
+            f[b] = pn[f"seed{seed}/{b}"]
+    return f
+
+
+def fixed_opponent():
+    import numpy as np
+    hp = RES / "fixed_opponent" / "h2h.json"
+    fins = {}
+    for g, run, _ in FO_GROUPS:
+        fs = [_fo_dir(g, run, s) / "final.json" for s in (0, 1, 2)]
+        if not all(f.exists() for f in fs):
+            print("fixed_opponent: runs incomplete")
+            return
+        if run == "classical" and not (RES / "fixed_opponent" / "classical_panel.json").exists():
+            print("fixed_opponent: classical panel missing")
+            return
+        fins[g] = [_fo_final(g, run, sd) for sd in (0, 1, 2)]
+    # ---- panel table: each learner vs every bot (its own trainer marked)
+    best = {b: max(np.mean([f[b]["score"] for f in fins[g]]) for g, _, _ in FO_GROUPS) for b, _ in FO_BOTS}
+    rows = []
+    for g, run, lab in FO_GROUPS:
+        cells = [lab]
+        for b, _ in FO_BOTS:
+            v = [f[b]["score"] for f in fins[g]]
+            c = rf"{pct(np.mean(v))} $\pm$ {pct(np.std(v, ddof=1))}"
+            c = bold_if(c, np.mean(v) == best[b])
+            if FO_TRAINER.get(g) == b:
+                c = rf"\underline{{{c}}}$^\dagger$"
+            cells.append(c)
+        rows.append(" & ".join(cells) + r" \\")
+        if g == "dqn-minimax-d3":
+            rows.append(r"\midrule")
+    write("fo_panel.tex", "\n".join(rows) + "\n")
+
+    FIG.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": INK2, "axes.labelcolor": INK,
+                         "xtick.color": INK2, "ytick.color": INK2})
+    # ---- bars: learners x bots
+    fig, ax = plt.subplots(figsize=(6.6, 3.0))
+    x = np.arange(len(FO_GROUPS))
+    w = 0.16
+    for j, (b, blab) in enumerate(FO_BOTS):
+        means = [100 * np.mean([f[b]["score"] for f in fins[g]]) for g, _, _ in FO_GROUPS]
+        lo = [m - 100 * min(f[b]["score"] for f in fins[g]) for m, (g, _, _) in zip(means, FO_GROUPS)]
+        hi = [100 * max(f[b]["score"] for f in fins[g]) - m for m, (g, _, _) in zip(means, FO_GROUPS)]
+        xs = x + (j - 2) * (w + 0.01)
+        ax.bar(xs, means, w, color=OPP_COLOR[b], edgecolor="white", linewidth=0.8, label=f"vs {blab}")
+        ax.errorbar(xs, means, yerr=[lo, hi], fmt="none", ecolor=INK2, elinewidth=0.8, capsize=1.5)
+    ax.axhline(50, color=INK, lw=0.8, ls=":")
+    ax.set_xticks(x)
+    ax.set_xticklabels([lab.replace("DQN trained ", "trained\n").replace("classical DQN (Phase 1, vs heuristic)",
+                        "classical DQN\n(Phase 1)") for _, _, lab in FO_GROUPS], fontsize=7.5)
+    ax.set_ylabel("final score (%)")
+    ax.set_ylim(0, 108)
+    ax.set_yticks(range(0, 101, 20))
+    _style_axes(ax)
+    ax.legend(frameon=False, ncol=5, loc="upper center", bbox_to_anchor=(0.5, 1.14), fontsize=7.5)
+    fig.tight_layout()
+    fig.savefig(FIG / "fo_bars.pdf")
+    plt.close(fig)
+
+    # ---- learning curves vs minimax-d2 (held out for all three)
+    fig, ax = plt.subplots(figsize=(6.2, 2.8))
+    ramp = {"dqn-random": "#86b6ef", "dqn-heuristic": "#2a78d6", "dqn-minimax-d3": "#104281"}
+    for g, run, lab in FO_GROUPS[:3]:
+        cv = [_curve(_fo_dir(g, run, s)) for s in (0, 1, 2)]
+        L = min(len(c) for c in cv)
+        gx = np.array([float(cv[0][i]["games"]) for i in range(L)]) / 1000
+        y = np.array([[100 * float(c[i]["score"]) for i in range(L)] for c in cv])
+        ax.fill_between(gx, y.min(0), y.max(0), color=ramp[g], alpha=0.15, lw=0)
+        ax.plot(gx, y.mean(0), color=ramp[g], lw=2, label=lab)
+    sp = 100 * np.mean([f["minimax-d2"]["score"] for f in fins["dqn-selfplay"]])
+    ax.axhline(sp, color=OPP_COLOR["p0"], lw=1.6, ls="--", label="self-play DQN, final")
+    ax.set_xlabel("training games (thousands)")
+    ax.set_ylabel("score vs minimax-d2 (%)")
+    ax.set_ylim(0, 60)
+    _style_axes(ax)
+    ax.grid(True, axis="x", color=GRID, lw=0.6)
+    ax.legend(frameon=False, fontsize=7, loc="upper left", ncol=2)
+    fig.tight_layout()
+    fig.savefig(FIG / "fo_curves.pdf")
+    plt.close(fig)
+
+    # ---- trainer curves: checkpoints vs own trainer (solid) and the other fixed bots (dashed)
+    tp = RES / "fixed_opponent" / "trainer_curves.json"
+    if tp.exists():
+        T = json.loads(tp.read_text())
+        runs = [("vs-random", "random", "trained vs random"), ("vs-heuristic", "heuristic", "trained vs heuristic"),
+                ("vs-minimax-d3", "minimax-d3", "trained vs minimax-d3")]
+        fig, axes = plt.subplots(1, 3, figsize=(6.8, 2.9), sharey=True)
+        for ax, (run, trainer, title) in zip(axes, runs):
+            for b in ("random", "heuristic", "minimax-d3"):
+                by = {}
+                for k, v in T.items():
+                    if k.startswith(run + "/"):
+                        by.setdefault(v["games"], []).append(100 * v[b]["score"])
+                g = sorted(by)
+                if not g:
+                    continue
+                own = b == trainer
+                ax.plot([x / 1000 for x in g], [np.mean(by[x]) for x in g], color=OPP_COLOR[b],
+                        lw=2.4 if own else 1.4, ls="-" if own else "--", marker="o", ms=3.5 if own else 2.5,
+                        label=f"vs {b}" + (" (trainer)" if own else ""))
+            ax.axhline(50, color=INK, lw=0.8, ls=":")
+            ax.set_title(title, fontsize=8.5, color=INK)
+            ax.set_xlabel("training games (k)", fontsize=8)
+            ax.set_ylim(0, 100)
+            ax.set_xticks([50, 100, 150, 200])
+            _style_axes(ax)
+        axes[0].set_ylabel("score (%)")
+        from matplotlib.lines import Line2D
+        handles = [Line2D([], [], color=OPP_COLOR[b], lw=1.6, ls="--", marker="o", ms=3, label=f"vs {b}")
+                   for b in ("random", "heuristic", "minimax-d3")]
+        handles.append(Line2D([], [], color=INK2, lw=2.6, ls="-", label="thick solid = own trainer"))
+        fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=7,
+                   bbox_to_anchor=(0.5, -0.01))
+        fig.tight_layout(rect=(0, 0.08, 1, 1))
+        fig.savefig(FIG / "fo_trainer_curves.pdf")
+        plt.close(fig)
+
+    # ---- round robin between the learner groups
+    if not hp.exists():
+        return
+    H = json.loads(hp.read_text())
+    names = [g for g, _, _ in FO_GROUPS]
+    n_g = len(names)
+    mat = np.full((n_g, n_g), np.nan)
+    ci = {}
+    rng = np.random.default_rng(0)
+    for i, ga in enumerate(names):
+        for j, gb in enumerate(names):
+            if i == j:
+                continue
+            M = {}
+            for k, v in H.items():
+                a, b = k.split("|")
+                (an, asd), (bn, bsd) = a.split("/"), b.split("/")
+                if an == ga and bn == gb:
+                    M[(asd, bsd)] = v["score"]
+                elif an == gb and bn == ga:
+                    M[(bsd, asd)] = 1 - v["score"]
+            if not M:
+                continue
+            mat[i, j] = 100 * np.mean(list(M.values()))
+            S = ["seed0", "seed1", "seed2"]
+            boots = [np.mean([M[(a, b)] for a in rng.choice(S, 3) for b in rng.choice(S, 3)]) for _ in range(5000)]
+            ci[(ga, gb)] = np.percentile(boots, [2.5, 97.5]) * 100
+    from matplotlib.colors import LinearSegmentedColormap
+    cmap = LinearSegmentedColormap.from_list("div", ["#d03b3b", "#f0efec", "#2a78d6"])
+    fig, ax = plt.subplots(figsize=(4.6, 3.6))
+    im = ax.imshow(mat, cmap=cmap, vmin=0, vmax=100)
+    for i in range(n_g):
+        for j in range(n_g):
+            if not np.isnan(mat[i, j]):
+                ax.text(j, i, f"{mat[i, j]:.0f}", ha="center", va="center", fontsize=8.5, color=INK)
+    short = ["vs random", "vs heuristic", "vs minimax-d3", "self-play", "classical\n(Ph. 1)"]
+    ax.set_xticks(range(n_g), short, fontsize=7.5, rotation=20)
+    ax.set_yticks(range(n_g), short, fontsize=7.5)
+    ax.set_xlabel("opponent (trained ...)")
+    ax.set_ylabel("player (trained ...)")
+    cb = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cb.set_label("player's score (%)", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(FIG / "fo_h2h.pdf")
+    plt.close(fig)
+    rows = []
+    for i, ga in enumerate(names):
+        for j, gb in enumerate(names):
+            if j > i:
+                lo, hi = ci[(ga, gb)]
+                la, lb = (FO_GROUPS[i][2].replace("DQN trained ", ""), FO_GROUPS[j][2].replace("DQN trained ", ""))
+                rows.append(rf"{la} & {lb} & {mat[i, j]:.1f} & [{lo:.1f}, {hi:.1f}] \\")
+    write("fo_h2h.tex", "\n".join(rows) + "\n")
+
+
+# ------------------------------------------------------------- co-evolution (Phase 4)
+CO_CFGS = [("F1-N2", "F1", 2, 200_000), ("F1-N4", "F1", 4, 200_000), ("F1-N8", "F1", 8, 200_000),
+           ("F2-N4", "F2", 4, 100_000), ("F2-N8", "F2", 8, 50_000)]
+
+
+def _co_members(cfg):
+    for sd in (0, 1, 2):
+        for m in sorted((RES / "coevo" / cfg / f"seed{sd}").glob("m*")):
+            yield sd, m
+
+
+def _co_best(W, cfg, sd, n):
+    """Best member of one population by its mean score inside the population (never by test results)."""
+    tot = {i: [] for i in range(n)}
+    for k, v in W.items():
+        run, pair = k.rsplit("/", 1)[0], k.rsplit("/", 1)[1]
+        if run != f"{cfg}/seed{sd}":
+            continue
+        a, b = pair.split("|")
+        tot[int(a[1:])].append(v["score"])
+        tot[int(b[1:])].append(1 - v["score"])
+    return max(tot, key=lambda i: sum(tot[i]) / max(1, len(tot[i])))
+
+
+def coevo():
+    import numpy as np
+    ep, wp = RES / "coevo" / "eval_members.json", RES / "coevo" / "within_h2h.json"
+    if not (ep.exists() and wp.exists()):
+        print("coevo: evaluation missing")
+        return
+    E, Wn = json.loads(ep.read_text()), json.loads(wp.read_text())
+    n_expected = sum(3 * n for _, _, n, _ in CO_CFGS)
+    if len(E) < n_expected:
+        print(f"coevo: evaluation incomplete ({len(E)}/{n_expected})")
+        return
+    div = json.loads((RES / "coevo" / "diversity.json").read_text())
+    rng = np.random.default_rng(0)
+
+    def avg_vs(entries, pref):
+        v = [x["score"] for k, x in entries.items() if k.startswith(pref)]
+        return sum(v) / len(v)
+
+    # self-play reference (Phase 3, p = 0)
+    L = json.loads((RES / "league" / "dqn_eval.json").read_text())
+    sp = {"ppo": np.mean([avg_vs(L[f"p0/seed{s}"], "ppo-s") for s in (0, 1, 2)]),
+          "dqn+": np.mean([avg_vs(L[f"p0/seed{s}"], "dqn+-s") for s in (0, 1, 2)]),
+          **{b: np.mean([L[f"p0/seed{s}"][b]["score"] for s in (0, 1, 2)]) for b in ("minimax-d2", "minimax-d3", "heuristic", "minimax-d4")}}
+    rows, bars = [], {}
+    rows.append(rf"self-play DQN (reference) & 1 & 200k & 50 & -- & {pct(sp['ppo'])} & {pct(sp['dqn+'])} & "
+                rf"{pct(sp['minimax-d2'])} & {pct(sp['minimax-d3'])} & {pct(sp['heuristic'])} & "
+                rf"{pct(sp['minimax-d4'])} & {pct(div['selfplay_seeds']['mean'])} \\")
+    rows.append(r"\midrule")
+    bars["self-play\n(N=1)"] = {"vs self-play": 50.0, "ppo": 100 * sp["ppo"], "dqn+": 100 * sp["dqn+"],
+                                 "minimax-d2": 100 * sp["minimax-d2"], "minimax-d3": 100 * sp["minimax-d3"]}
+    for cfg, fam, n, gpm in CO_CFGS:
+        # per (population seed, self-play seed): mean over members
+        M = {}
+        fins, mem_keys = [], []
+        for sd, m in _co_members(cfg):
+            key = f"{cfg}/seed{sd}/{m.name}"
+            mem_keys.append((sd, key))
+            fins.append(json.loads((m / "final.json").read_text()))
+            for b in (0, 1, 2):
+                M.setdefault((sd, b), []).append(E[key][f"selfplay-s{b}"]["score"])
+        Mm = {k: np.mean(v) for k, v in M.items()}
+        mean = np.mean(list(Mm.values()))
+        boots = [np.mean([Mm[(a, b)] for a in rng.choice(3, 3) for b in rng.choice(3, 3)]) for _ in range(10_000)]
+        lo, hi = np.percentile(boots, [2.5, 97.5])
+        best = []
+        for sd in (0, 1, 2):
+            bi = _co_best(Wn, cfg, sd, n)
+            best.append(avg_vs(E[f"{cfg}/seed{sd}/m{bi}"], "selfplay-s"))
+        ppo = np.mean([avg_vs(E[k], "ppo-s") for _, k in mem_keys])
+        dqp = np.mean([avg_vs(E[k], "dqn+-s") for _, k in mem_keys])
+        bot = {b: np.mean([f[b]["score"] for f in fins]) for b in ("minimax-d2", "minimax-d3", "heuristic", "minimax-d4")}
+        dv = np.mean([div[f"{cfg}/seed{sd}"]["mean"] for sd in (0, 1, 2)])
+        rows.append(rf"{fam} & {n} & {gpm // 1000}k & {pct(mean)} [{pct(lo)}, {pct(hi)}] & {pct(np.mean(best))} & "
+                    rf"{pct(ppo)} & {pct(dqp)} & {pct(bot['minimax-d2'])} & {pct(bot['minimax-d3'])} & "
+                    rf"{pct(bot['heuristic'])} & {pct(bot['minimax-d4'])} & {pct(dv)} \\")
+        bars[f"{fam}\nN={n}"] = {"vs self-play": 100 * mean, "vs self-play CI": (100 * lo, 100 * hi), "ppo": 100 * ppo,
+                                  "dqn+": 100 * dqp, "minimax-d2": 100 * bot["minimax-d2"], "minimax-d3": 100 * bot["minimax-d3"]}
+    write("coevo_results.tex", "\n".join(rows) + "\n")
+
+    FIG.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": INK2, "axes.labelcolor": INK,
+                         "xtick.color": INK2, "ytick.color": INK2})
+    # ---- bars: average member vs self-play and the held-out opponents, per configuration
+    keys = [("vs self-play", "vs self-play DQN", OPP_COLOR["p0"]), ("ppo", "vs Phase 2 PPO", OPP_COLOR["ppo"]),
+            ("dqn+", "vs Phase 2 DQN+", OPP_COLOR["dqn+"]), ("minimax-d2", "vs minimax-d2", OPP_COLOR["minimax-d2"]),
+            ("minimax-d3", "vs minimax-d3", OPP_COLOR["minimax-d3"])]
+    groups = list(bars)
+    fig, ax = plt.subplots(figsize=(6.6, 3.0))
+    x = np.arange(len(groups))
+    w = 0.16
+    for j, (k, lab, c) in enumerate(keys):
+        vals = [bars[g][k] for g in groups]
+        xs = x + (j - 2) * (w + 0.01)
+        ax.bar(xs, vals, w, color=c, edgecolor="white", linewidth=0.8, label=lab)
+        if k == "vs self-play":
+            for xi, g in zip(xs, groups):
+                if "vs self-play CI" in bars[g]:
+                    lo, hi = bars[g]["vs self-play CI"]
+                    ax.errorbar([xi], [bars[g][k]], yerr=[[bars[g][k] - lo], [hi - bars[g][k]]], fmt="none",
+                                ecolor=INK2, elinewidth=0.9, capsize=2)
+    ax.axhline(50, color=INK, lw=0.8, ls=":")
+    ax.axvline(0.5, color=INK2, lw=0.8, ls="--")
+    ax.set_xticks(x)
+    ax.set_xticklabels(groups, fontsize=7.5)
+    ax.set_ylabel("score (%)")
+    ax.set_ylim(0, 70)
+    _style_axes(ax)
+    ax.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, 1.2), fontsize=7)
+    fig.tight_layout()
+    fig.savefig(FIG / "coevo_bars.pdf")
+    plt.close(fig)
+
+    # ---- diversity per configuration vs the self-play-seed baseline
+    fig, ax = plt.subplots(figsize=(4.6, 2.6))
+    for i, (cfg, fam, n, _) in enumerate(CO_CFGS):
+        v = [100 * div[f"{cfg}/seed{sd}"]["mean"] for sd in (0, 1, 2)]
+        ax.scatter([i] * 3, v, color=SERIES1, s=22, zorder=3)
+        ax.hlines(np.mean(v), i - 0.25, i + 0.25, color=INK, lw=1.4)
+    ax.axhline(100 * div["selfplay_seeds"]["mean"], color=OPP_COLOR["p0"], lw=1.6, ls="--",
+               label="independent self-play seeds")
+    ax.set_xticks(range(len(CO_CFGS)), [f"{fam} N={n}" for _, fam, n, _ in CO_CFGS], fontsize=7.5)
+    ax.set_ylabel("moves that differ (%)")
+    ax.set_ylim(40, 70)
+    _style_axes(ax)
+    ax.legend(frameon=False, fontsize=7, loc="upper right")
+    fig.tight_layout()
+    fig.savefig(FIG / "coevo_diversity.pdf")
+    plt.close(fig)
+
+    # ---- checkpoint curves vs minimax-d3, average member, x = games per member
+    cp = RES / "coevo" / "ckpt_curves.json"
+    if cp.exists():
+        C = json.loads(cp.read_text())
+        fig, ax = plt.subplots(figsize=(6.2, 2.8))
+        ramp = {"F1-N2": "#86b6ef", "F1-N4": "#2a78d6", "F1-N8": "#104281", "F2-N4": "#eb6834", "F2-N8": "#a8461d"}
+        for cfg, fam, n, _ in CO_CFGS:
+            by = {}
+            for k, v in C.items():
+                if k.startswith(cfg + "/"):
+                    # final models sit at the member's actual game count (budget +- a few hundred): snap to the 25k grid
+                    g25 = int(round(v["games"] / 25_000) * 25_000)
+                    by.setdefault(g25, []).append(100 * v["minimax-d3"]["score"])
+            g = sorted(by)
+            ax.plot([x / 1000 for x in g], [np.mean(by[x]) for x in g], color=ramp[cfg], lw=2, marker="o", ms=3,
+                    ls="-" if fam == "F1" else "--", label=f"{fam} N={n}")
+        SC = json.loads((RES / "league" / "dqn_ckpt_curves.json").read_text())
+        by = {}
+        for k, v in SC.items():
+            if k.startswith("p0/"):
+                by.setdefault(v["games"], []).append(100 * v["minimax-d3"]["score"])
+        g = sorted(by)
+        ax.plot([x / 1000 for x in g], [np.mean(by[x]) for x in g], color=OPP_COLOR["p0"], lw=2.2, marker="s", ms=3,
+                label="self-play DQN")
+        ax.set_xlabel("training games per agent (thousands)")
+        ax.set_ylabel("score vs minimax-d3 (%)")
+        ax.set_ylim(0, 40)
+        _style_axes(ax)
+        ax.grid(True, axis="x", color=GRID, lw=0.6)
+        ax.legend(frameon=False, fontsize=7, ncol=3, loc="lower right")
+        fig.tight_layout()
+        fig.savefig(FIG / "coevo_ckpt.pdf")
+        plt.close(fig)
+
+    # ---- non-transitivity inside populations (N >= 3)
+    from othello.eval.population_metrics import count_cycles
+    rows = []
+    for cfg, fam, n, _ in CO_CFGS:
+        if n < 3:
+            continue
+        n_cyc, n_edges, n_pairs = 0, 0, 0
+        for sd in (0, 1, 2):
+            names = [f"m{i}" for i in range(n)]
+            score, games = {}, {}
+            for k, v in Wn.items():
+                run, pair = k.rsplit("/", 1)[0], k.rsplit("/", 1)[1]
+                if run == f"{cfg}/seed{sd}":
+                    a, b = pair.split("|")
+                    score[(a, b)], games[(a, b)] = v["score"], v["games"]
+            cyc, edges = count_cycles(names, score, games)
+            n_cyc += len(cyc)
+            n_edges += edges
+            n_pairs += n * (n - 1) // 2
+        rows.append(rf"{fam} & {n} & {n_pairs} & {n_edges} & {n_cyc} \\")
+    write("coevo_cycles.tex", "\n".join(rows) + "\n")
+
+
 def yaml_load(path):
     import yaml
     return yaml.safe_load(Path(path).read_text())
@@ -802,4 +1194,6 @@ if __name__ == "__main__":
     classical()
     selfplay()
     league()
+    fixed_opponent()
+    coevo()
     print("wrote", sorted(p.name for p in TAB.iterdir()), sorted(p.name for p in FIG.iterdir()))

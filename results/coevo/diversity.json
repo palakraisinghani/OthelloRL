@@ -1,0 +1,405 @@
+{
+  "selfplay_seeds": {
+    "members": [
+      "results/league/dqn/p0/seed0",
+      "results/league/dqn/p0/seed1",
+      "results/league/dqn/p0/seed2"
+    ],
+    "mean": 0.5706666666666667,
+    "pairs": [
+      0.502,
+      0.618,
+      0.592
+    ]
+  },
+  "F1-N2/seed0": {
+    "members": [
+      "results/coevo/F1-N2/seed0/m0",
+      "results/coevo/F1-N2/seed0/m1"
+    ],
+    "mean": 0.592,
+    "pairs": [
+      0.592
+    ]
+  },
+  "F1-N2/seed1": {
+    "members": [
+      "results/coevo/F1-N2/seed1/m0",
+      "results/coevo/F1-N2/seed1/m1"
+    ],
+    "mean": 0.57,
+    "pairs": [
+      0.57
+    ]
+  },
+  "F1-N2/seed2": {
+    "members": [
+      "results/coevo/F1-N2/seed2/m0",
+      "results/coevo/F1-N2/seed2/m1"
+    ],
+    "mean": 0.601,
+    "pairs": [
+      0.601
+    ]
+  },
+  "F1-N4/seed0": {
+    "members": [
+      "results/coevo/F1-N4/seed0/m0",
+      "results/coevo/F1-N4/seed0/m1",
+      "results/coevo/F1-N4/seed0/m2",
+      "results/coevo/F1-N4/seed0/m3"
+    ],
+    "mean": 0.537,
+    "pairs": [
+      0.585,
+      0.572,
+      0.593,
+      0.503,
+      0.506,
+      0.463
+    ]
+  },
+  "F1-N4/seed1": {
+    "members": [
+      "results/coevo/F1-N4/seed1/m0",
+      "results/coevo/F1-N4/seed1/m1",
+      "results/coevo/F1-N4/seed1/m2",
+      "results/coevo/F1-N4/seed1/m3"
+    ],
+    "mean": 0.5363333333333333,
+    "pairs": [
+      0.484,
+      0.483,
+      0.548,
+      0.493,
+      0.604,
+      0.606
+    ]
+  },
+  "F1-N4/seed2": {
+    "members": [
+      "results/coevo/F1-N4/seed2/m0",
+      "results/coevo/F1-N4/seed2/m1",
+      "results/coevo/F1-N4/seed2/m2",
+      "results/coevo/F1-N4/seed2/m3"
+    ],
+    "mean": 0.5393333333333333,
+    "pairs": [
+      0.499,
+      0.581,
+      0.487,
+      0.581,
+      0.488,
+      0.6
+    ]
+  },
+  "F1-N8/seed0": {
+    "members": [
+      "results/coevo/F1-N8/seed0/m0",
+      "results/coevo/F1-N8/seed0/m1",
+      "results/coevo/F1-N8/seed0/m2",
+      "results/coevo/F1-N8/seed0/m3",
+      "results/coevo/F1-N8/seed0/m4",
+      "results/coevo/F1-N8/seed0/m5",
+      "results/coevo/F1-N8/seed0/m6",
+      "results/coevo/F1-N8/seed0/m7"
+    ],
+    "mean": 0.56875,
+    "pairs": [
+      0.568,
+      0.56,
+      0.588,
+      0.506,
+      0.576,
+      0.53,
+      0.633,
+      0.488,
+      0.585,
+      0.567,
+      0.538,
+      0.596,
+      0.536,
+      0.631,
+      0.614,
+      0.597,
+      0.617,
+      0.494,
+      0.565,
+      0.446,
+      0.591,
+      0.591,
+      0.566,
+      0.508,
+      0.623,
+      0.577,
+      0.619,
+      0.615
+    ]
+  },
+  "F1-N8/seed1": {
+    "members": [
+      "results/coevo/F1-N8/seed1/m0",
+      "results/coevo/F1-N8/seed1/m1",
+      "results/coevo/F1-N8/seed1/m2",
+      "results/coevo/F1-N8/seed1/m3",
+      "results/coevo/F1-N8/seed1/m4",
+      "results/coevo/F1-N8/seed1/m5",
+      "results/coevo/F1-N8/seed1/m6",
+      "results/coevo/F1-N8/seed1/m7"
+    ],
+    "mean": 0.5752499999999999,
+    "pairs": [
+      0.576,
+      0.586,
+      0.566,
+      0.477,
+      0.505,
+      0.586,
+      0.581,
+      0.59,
+      0.596,
+      0.634,
+      0.59,
+      0.594,
+      0.582,
+      0.469,
+      0.583,
+      0.614,
+      0.577,
+      0.615,
+      0.576,
+      0.593,
+      0.619,
+      0.566,
+      0.499,
+      0.619,
+      0.574,
+      0.622,
+      0.618,
+      0.5
+    ]
+  },
+  "F1-N8/seed2": {
+    "members": [
+      "results/coevo/F1-N8/seed2/m0",
+      "results/coevo/F1-N8/seed2/m1",
+      "results/coevo/F1-N8/seed2/m2",
+      "results/coevo/F1-N8/seed2/m3",
+      "results/coevo/F1-N8/seed2/m4",
+      "results/coevo/F1-N8/seed2/m5",
+      "results/coevo/F1-N8/seed2/m6",
+      "results/coevo/F1-N8/seed2/m7"
+    ],
+    "mean": 0.53825,
+    "pairs": [
+      0.517,
+      0.576,
+      0.474,
+      0.608,
+      0.436,
+      0.561,
+      0.522,
+      0.567,
+      0.477,
+      0.606,
+      0.457,
+      0.587,
+      0.484,
+      0.558,
+      0.496,
+      0.576,
+      0.578,
+      0.562,
+      0.59,
+      0.446,
+      0.543,
+      0.488,
+      0.576,
+      0.596,
+      0.62,
+      0.55,
+      0.465,
+      0.555
+    ]
+  },
+  "F2-N4/seed0": {
+    "members": [
+      "results/coevo/F2-N4/seed0/m0",
+      "results/coevo/F2-N4/seed0/m1",
+      "results/coevo/F2-N4/seed0/m2",
+      "results/coevo/F2-N4/seed0/m3"
+    ],
+    "mean": 0.5766666666666667,
+    "pairs": [
+      0.57,
+      0.568,
+      0.617,
+      0.584,
+      0.499,
+      0.622
+    ]
+  },
+  "F2-N4/seed1": {
+    "members": [
+      "results/coevo/F2-N4/seed1/m0",
+      "results/coevo/F2-N4/seed1/m1",
+      "results/coevo/F2-N4/seed1/m2",
+      "results/coevo/F2-N4/seed1/m3"
+    ],
+    "mean": 0.5588333333333333,
+    "pairs": [
+      0.48,
+      0.589,
+      0.632,
+      0.552,
+      0.625,
+      0.475
+    ]
+  },
+  "F2-N4/seed2": {
+    "members": [
+      "results/coevo/F2-N4/seed2/m0",
+      "results/coevo/F2-N4/seed2/m1",
+      "results/coevo/F2-N4/seed2/m2",
+      "results/coevo/F2-N4/seed2/m3"
+    ],
+    "mean": 0.5535,
+    "pairs": [
+      0.514,
+      0.619,
+      0.476,
+      0.621,
+      0.479,
+      0.612
+    ]
+  },
+  "F2-N8/seed0": {
+    "members": [
+      "results/coevo/F2-N8/seed0/m0",
+      "results/coevo/F2-N8/seed0/m1",
+      "results/coevo/F2-N8/seed0/m2",
+      "results/coevo/F2-N8/seed0/m3",
+      "results/coevo/F2-N8/seed0/m4",
+      "results/coevo/F2-N8/seed0/m5",
+      "results/coevo/F2-N8/seed0/m6",
+      "results/coevo/F2-N8/seed0/m7"
+    ],
+    "mean": 0.5816785714285714,
+    "pairs": [
+      0.611,
+      0.488,
+      0.611,
+      0.575,
+      0.61,
+      0.617,
+      0.59,
+      0.572,
+      0.585,
+      0.501,
+      0.555,
+      0.547,
+      0.642,
+      0.604,
+      0.617,
+      0.585,
+      0.639,
+      0.648,
+      0.607,
+      0.552,
+      0.502,
+      0.534,
+      0.623,
+      0.574,
+      0.575,
+      0.585,
+      0.638,
+      0.5
+    ]
+  },
+  "F2-N8/seed1": {
+    "members": [
+      "results/coevo/F2-N8/seed1/m0",
+      "results/coevo/F2-N8/seed1/m1",
+      "results/coevo/F2-N8/seed1/m2",
+      "results/coevo/F2-N8/seed1/m3",
+      "results/coevo/F2-N8/seed1/m4",
+      "results/coevo/F2-N8/seed1/m5",
+      "results/coevo/F2-N8/seed1/m6",
+      "results/coevo/F2-N8/seed1/m7"
+    ],
+    "mean": 0.5761071428571428,
+    "pairs": [
+      0.638,
+      0.57,
+      0.587,
+      0.605,
+      0.592,
+      0.593,
+      0.639,
+      0.59,
+      0.582,
+      0.596,
+      0.6,
+      0.622,
+      0.58,
+      0.453,
+      0.585,
+      0.478,
+      0.611,
+      0.499,
+      0.594,
+      0.454,
+      0.617,
+      0.523,
+      0.618,
+      0.499,
+      0.642,
+      0.61,
+      0.549,
+      0.605
+    ]
+  },
+  "F2-N8/seed2": {
+    "members": [
+      "results/coevo/F2-N8/seed2/m0",
+      "results/coevo/F2-N8/seed2/m1",
+      "results/coevo/F2-N8/seed2/m2",
+      "results/coevo/F2-N8/seed2/m3",
+      "results/coevo/F2-N8/seed2/m4",
+      "results/coevo/F2-N8/seed2/m5",
+      "results/coevo/F2-N8/seed2/m6",
+      "results/coevo/F2-N8/seed2/m7"
+    ],
+    "mean": 0.5804642857142858,
+    "pairs": [
+      0.623,
+      0.468,
+      0.488,
+      0.625,
+      0.569,
+      0.629,
+      0.628,
+      0.644,
+      0.604,
+      0.636,
+      0.517,
+      0.546,
+      0.599,
+      0.487,
+      0.596,
+      0.588,
+      0.582,
+      0.581,
+      0.623,
+      0.594,
+      0.584,
+      0.592,
+      0.604,
+      0.608,
+      0.507,
+      0.516,
+      0.594,
+      0.621
+    ]
+  }
+}

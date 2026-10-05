@@ -63,6 +63,8 @@ def run_one(cfg, run, seed, games=None, out=OUT):
         cfg["train_games"] = games
         cfg["eval_every"] = max(1, games // 4)
     run_cfg = cfg["runs"][run]
+    if "train_opponent" in run_cfg:
+        cfg["train_opponent"] = run_cfg["train_opponent"]
     env = OthelloEnv(cfg["board_size"])
     learner = build(run_cfg, env, seed)
     learner.name = run

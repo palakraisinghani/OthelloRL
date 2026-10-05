@@ -1,0 +1,1334 @@
+{
+  "vs-random/seed0/g050000": {
+    "games": 50000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 177,
+      "draws": 2,
+      "losses": 21,
+      "win_rate": 0.885,
+      "score": 0.89,
+      "score_ci95": 0.04336430790408166,
+      "mean_margin": 13.125,
+      "seconds": 9.11460018157959
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 80,
+      "draws": 9,
+      "losses": 111,
+      "win_rate": 0.4,
+      "score": 0.4225,
+      "score_ci95": 0.0684589800537519,
+      "mean_margin": -3.355,
+      "seconds": 10.278606414794922
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 20,
+      "draws": 4,
+      "losses": 176,
+      "win_rate": 0.1,
+      "score": 0.11,
+      "score_ci95": 0.04336430790408167,
+      "mean_margin": -18.095,
+      "seconds": 12.13912320137024
+    }
+  },
+  "vs-random/seed0/g100000": {
+    "games": 100000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 174,
+      "draws": 2,
+      "losses": 24,
+      "win_rate": 0.87,
+      "score": 0.875,
+      "score_ci95": 0.04583530298798078,
+      "mean_margin": 12.33,
+      "seconds": 10.507973432540894
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 70,
+      "draws": 10,
+      "losses": 120,
+      "win_rate": 0.35,
+      "score": 0.375,
+      "score_ci95": 0.06709601329438285,
+      "mean_margin": -4.495,
+      "seconds": 10.678217887878418
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 25,
+      "draws": 6,
+      "losses": 169,
+      "win_rate": 0.125,
+      "score": 0.14,
+      "score_ci95": 0.048089949053830364,
+      "mean_margin": -16.105,
+      "seconds": 12.299808740615845
+    }
+  },
+  "vs-random/seed0/g150000": {
+    "games": 150000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 164,
+      "draws": 6,
+      "losses": 30,
+      "win_rate": 0.82,
+      "score": 0.835,
+      "score_ci95": 0.05144299952374473,
+      "mean_margin": 11.835,
+      "seconds": 9.55895733833313
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 75,
+      "draws": 10,
+      "losses": 115,
+      "win_rate": 0.375,
+      "score": 0.4,
+      "score_ci95": 0.06789639165669999,
+      "mean_margin": -3.93,
+      "seconds": 10.145933866500854
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 16,
+      "draws": 2,
+      "losses": 182,
+      "win_rate": 0.08,
+      "score": 0.085,
+      "score_ci95": 0.03865103103411344,
+      "mean_margin": -17.23,
+      "seconds": 12.215052366256714
+    }
+  },
+  "vs-random/seed0/g200000": {
+    "games": 200000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 168,
+      "draws": 7,
+      "losses": 25,
+      "win_rate": 0.84,
+      "score": 0.8575,
+      "score_ci95": 0.04844685283896158,
+      "mean_margin": 12.67,
+      "seconds": 9.718974590301514
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 78,
+      "draws": 4,
+      "losses": 118,
+      "win_rate": 0.39,
+      "score": 0.4,
+      "score_ci95": 0.06789639165669999,
+      "mean_margin": -4.88,
+      "seconds": 10.506265640258789
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 18,
+      "draws": 7,
+      "losses": 175,
+      "win_rate": 0.09,
+      "score": 0.1075,
+      "score_ci95": 0.042928866162525184,
+      "mean_margin": -17.23,
+      "seconds": 11.929465293884277
+    }
+  },
+  "vs-random/seed1/g050000": {
+    "games": 50000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 173,
+      "draws": 2,
+      "losses": 25,
+      "win_rate": 0.865,
+      "score": 0.87,
+      "score_ci95": 0.04660927804632893,
+      "mean_margin": 13.07,
+      "seconds": 9.889731168746948
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 67,
+      "draws": 6,
+      "losses": 127,
+      "win_rate": 0.335,
+      "score": 0.35,
+      "score_ci95": 0.066104614059837,
+      "mean_margin": -5.64,
+      "seconds": 10.046840906143188
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 33,
+      "draws": 3,
+      "losses": 164,
+      "win_rate": 0.165,
+      "score": 0.1725,
+      "score_ci95": 0.05236240970390878,
+      "mean_margin": -15.655,
+      "seconds": 11.9414701461792
+    }
+  },
+  "vs-random/seed1/g100000": {
+    "games": 100000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 165,
+      "draws": 7,
+      "losses": 28,
+      "win_rate": 0.825,
+      "score": 0.8425,
+      "score_ci95": 0.050485458797558724,
+      "mean_margin": 10.825,
+      "seconds": 9.639981985092163
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 80,
+      "draws": 6,
+      "losses": 114,
+      "win_rate": 0.4,
+      "score": 0.415,
+      "score_ci95": 0.06828778953810116,
+      "mean_margin": -3.94,
+      "seconds": 10.41426420211792
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 35,
+      "draws": 6,
+      "losses": 159,
+      "win_rate": 0.175,
+      "score": 0.19,
+      "score_ci95": 0.054370131506186366,
+      "mean_margin": -14.635,
+      "seconds": 12.375170946121216
+    }
+  },
+  "vs-random/seed1/g150000": {
+    "games": 150000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 172,
+      "draws": 6,
+      "losses": 22,
+      "win_rate": 0.86,
+      "score": 0.875,
+      "score_ci95": 0.04583530298798078,
+      "mean_margin": 12.555,
+      "seconds": 9.820963859558105
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 72,
+      "draws": 11,
+      "losses": 117,
+      "win_rate": 0.36,
+      "score": 0.3875,
+      "score_ci95": 0.06751961751965127,
+      "mean_margin": -4.585,
+      "seconds": 9.881145238876343
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 28,
+      "draws": 2,
+      "losses": 170,
+      "win_rate": 0.14,
+      "score": 0.145,
+      "score_ci95": 0.048798686457731624,
+      "mean_margin": -15.98,
+      "seconds": 11.712984561920166
+    }
+  },
+  "vs-random/seed1/g200000": {
+    "games": 200000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 163,
+      "draws": 4,
+      "losses": 33,
+      "win_rate": 0.815,
+      "score": 0.825,
+      "score_ci95": 0.052660753887501466,
+      "mean_margin": 12.405,
+      "seconds": 9.748485326766968
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 91,
+      "draws": 12,
+      "losses": 97,
+      "win_rate": 0.455,
+      "score": 0.485,
+      "score_ci95": 0.0692652741278052,
+      "mean_margin": -1.885,
+      "seconds": 10.420335054397583
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 31,
+      "draws": 3,
+      "losses": 166,
+      "win_rate": 0.155,
+      "score": 0.1625,
+      "score_ci95": 0.05112816004903756,
+      "mean_margin": -16.03,
+      "seconds": 12.280318021774292
+    }
+  },
+  "vs-random/seed2/g050000": {
+    "games": 50000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 163,
+      "draws": 10,
+      "losses": 27,
+      "win_rate": 0.815,
+      "score": 0.84,
+      "score_ci95": 0.05080900707551762,
+      "mean_margin": 12.115,
+      "seconds": 10.542718172073364
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 74,
+      "draws": 5,
+      "losses": 121,
+      "win_rate": 0.37,
+      "score": 0.3825,
+      "score_ci95": 0.0673558427309762,
+      "mean_margin": -4.8,
+      "seconds": 10.568873405456543
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 21,
+      "draws": 6,
+      "losses": 173,
+      "win_rate": 0.105,
+      "score": 0.12,
+      "score_ci95": 0.04503737114885815,
+      "mean_margin": -17.555,
+      "seconds": 12.055773735046387
+    }
+  },
+  "vs-random/seed2/g100000": {
+    "games": 100000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 178,
+      "draws": 7,
+      "losses": 15,
+      "win_rate": 0.89,
+      "score": 0.9075,
+      "score_ci95": 0.04015459562739987,
+      "mean_margin": 12.7,
+      "seconds": 10.4677152633667
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 76,
+      "draws": 8,
+      "losses": 116,
+      "win_rate": 0.38,
+      "score": 0.4,
+      "score_ci95": 0.06789639165669999,
+      "mean_margin": -4.275,
+      "seconds": 9.92040205001831
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 25,
+      "draws": 4,
+      "losses": 171,
+      "win_rate": 0.125,
+      "score": 0.135,
+      "score_ci95": 0.04736047085914581,
+      "mean_margin": -15.93,
+      "seconds": 12.291408777236938
+    }
+  },
+  "vs-random/seed2/g150000": {
+    "games": 150000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 172,
+      "draws": 4,
+      "losses": 24,
+      "win_rate": 0.86,
+      "score": 0.87,
+      "score_ci95": 0.04660927804632893,
+      "mean_margin": 12.7,
+      "seconds": 10.606277704238892
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 78,
+      "draws": 8,
+      "losses": 114,
+      "win_rate": 0.39,
+      "score": 0.41,
+      "score_ci95": 0.06816461838813447,
+      "mean_margin": -2.7,
+      "seconds": 10.395777702331543
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 22,
+      "draws": 4,
+      "losses": 174,
+      "win_rate": 0.11,
+      "score": 0.12,
+      "score_ci95": 0.04503737114885815,
+      "mean_margin": -16.06,
+      "seconds": 12.206514596939087
+    }
+  },
+  "vs-random/seed2/g200000": {
+    "games": 200000,
+    "trainer": "random",
+    "random": {
+      "games": 200,
+      "wins": 162,
+      "draws": 8,
+      "losses": 30,
+      "win_rate": 0.81,
+      "score": 0.83,
+      "score_ci95": 0.05206004994235024,
+      "mean_margin": 11.595,
+      "seconds": 11.008600950241089
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 76,
+      "draws": 7,
+      "losses": 117,
+      "win_rate": 0.38,
+      "score": 0.3975,
+      "score_ci95": 0.06782474437843464,
+      "mean_margin": -5.115,
+      "seconds": 10.318681240081787
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 21,
+      "draws": 3,
+      "losses": 176,
+      "win_rate": 0.105,
+      "score": 0.1125,
+      "score_ci95": 0.043792679182712714,
+      "mean_margin": -16.615,
+      "seconds": 12.057113409042358
+    }
+  },
+  "vs-heuristic/seed0/g050000": {
+    "games": 50000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 184,
+      "draws": 3,
+      "losses": 13,
+      "win_rate": 0.92,
+      "score": 0.9275,
+      "score_ci95": 0.0359390866606262,
+      "mean_margin": 14.625,
+      "seconds": 9.95976996421814
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 116,
+      "draws": 8,
+      "losses": 76,
+      "win_rate": 0.58,
+      "score": 0.6,
+      "score_ci95": 0.06789639165669999,
+      "mean_margin": 3.34,
+      "seconds": 11.129035949707031
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 43,
+      "draws": 8,
+      "losses": 149,
+      "win_rate": 0.215,
+      "score": 0.235,
+      "score_ci95": 0.05876323850844165,
+      "mean_margin": -12.05,
+      "seconds": 11.897144079208374
+    }
+  },
+  "vs-heuristic/seed0/g100000": {
+    "games": 100000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 184,
+      "draws": 6,
+      "losses": 10,
+      "win_rate": 0.92,
+      "score": 0.935,
+      "score_ci95": 0.03416674113813021,
+      "mean_margin": 15.345,
+      "seconds": 10.252266645431519
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 115,
+      "draws": 13,
+      "losses": 72,
+      "win_rate": 0.575,
+      "score": 0.6075,
+      "score_ci95": 0.06767590080671258,
+      "mean_margin": 3.975,
+      "seconds": 10.891165018081665
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 51,
+      "draws": 3,
+      "losses": 146,
+      "win_rate": 0.255,
+      "score": 0.2625,
+      "score_ci95": 0.06097990447680285,
+      "mean_margin": -10.9,
+      "seconds": 12.079157829284668
+    }
+  },
+  "vs-heuristic/seed0/g150000": {
+    "games": 150000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 178,
+      "draws": 5,
+      "losses": 17,
+      "win_rate": 0.89,
+      "score": 0.9025,
+      "score_ci95": 0.04111184683275613,
+      "mean_margin": 14.485,
+      "seconds": 11.300500392913818
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 133,
+      "draws": 5,
+      "losses": 62,
+      "win_rate": 0.665,
+      "score": 0.6775,
+      "score_ci95": 0.06478292946448162,
+      "mean_margin": 5.515,
+      "seconds": 10.528761863708496
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 41,
+      "draws": 6,
+      "losses": 153,
+      "win_rate": 0.205,
+      "score": 0.22,
+      "score_ci95": 0.057411608582237095,
+      "mean_margin": -10.995,
+      "seconds": 12.298043251037598
+    }
+  },
+  "vs-heuristic/seed0/g200000": {
+    "games": 200000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 187,
+      "draws": 4,
+      "losses": 9,
+      "win_rate": 0.935,
+      "score": 0.945,
+      "score_ci95": 0.031596452332500885,
+      "mean_margin": 15.515,
+      "seconds": 10.858105897903442
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 119,
+      "draws": 6,
+      "losses": 75,
+      "win_rate": 0.595,
+      "score": 0.61,
+      "score_ci95": 0.06759869229504369,
+      "mean_margin": 3.68,
+      "seconds": 10.56026554107666
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 51,
+      "draws": 4,
+      "losses": 145,
+      "win_rate": 0.255,
+      "score": 0.265,
+      "score_ci95": 0.061165661935435635,
+      "mean_margin": -9.73,
+      "seconds": 12.116361379623413
+    }
+  },
+  "vs-heuristic/seed1/g050000": {
+    "games": 50000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 175,
+      "draws": 7,
+      "losses": 18,
+      "win_rate": 0.875,
+      "score": 0.8925,
+      "score_ci95": 0.04292886616252519,
+      "mean_margin": 14.825,
+      "seconds": 11.020665407180786
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 108,
+      "draws": 3,
+      "losses": 89,
+      "win_rate": 0.54,
+      "score": 0.5475,
+      "score_ci95": 0.06898305552815125,
+      "mean_margin": 2.49,
+      "seconds": 10.745224475860596
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 48,
+      "draws": 7,
+      "losses": 145,
+      "win_rate": 0.24,
+      "score": 0.2575,
+      "score_ci95": 0.060600738856881935,
+      "mean_margin": -11.895,
+      "seconds": 12.181255578994751
+    }
+  },
+  "vs-heuristic/seed1/g100000": {
+    "games": 100000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 181,
+      "draws": 4,
+      "losses": 15,
+      "win_rate": 0.905,
+      "score": 0.915,
+      "score_ci95": 0.03865103103411342,
+      "mean_margin": 14.82,
+      "seconds": 10.407471895217896
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 118,
+      "draws": 9,
+      "losses": 73,
+      "win_rate": 0.59,
+      "score": 0.6125,
+      "score_ci95": 0.06751961751965127,
+      "mean_margin": 2.95,
+      "seconds": 10.278625011444092
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 40,
+      "draws": 9,
+      "losses": 151,
+      "win_rate": 0.2,
+      "score": 0.2225,
+      "score_ci95": 0.05764428809517904,
+      "mean_margin": -11.435,
+      "seconds": 12.008529901504517
+    }
+  },
+  "vs-heuristic/seed1/g150000": {
+    "games": 150000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 179,
+      "draws": 8,
+      "losses": 13,
+      "win_rate": 0.895,
+      "score": 0.915,
+      "score_ci95": 0.03865103103411342,
+      "mean_margin": 15.09,
+      "seconds": 11.042778968811035
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 117,
+      "draws": 7,
+      "losses": 76,
+      "win_rate": 0.585,
+      "score": 0.6025,
+      "score_ci95": 0.06782474437843464,
+      "mean_margin": 3.145,
+      "seconds": 10.69158935546875
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 40,
+      "draws": 6,
+      "losses": 154,
+      "win_rate": 0.2,
+      "score": 0.215,
+      "score_ci95": 0.05693707228159874,
+      "mean_margin": -11.16,
+      "seconds": 12.103396892547607
+    }
+  },
+  "vs-heuristic/seed1/g200000": {
+    "games": 200000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 176,
+      "draws": 8,
+      "losses": 16,
+      "win_rate": 0.88,
+      "score": 0.9,
+      "score_ci95": 0.04157787873376899,
+      "mean_margin": 14.775,
+      "seconds": 10.782272100448608
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 121,
+      "draws": 9,
+      "losses": 70,
+      "win_rate": 0.605,
+      "score": 0.6275,
+      "score_ci95": 0.06700559640806132,
+      "mean_margin": 5.355,
+      "seconds": 10.873048782348633
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 53,
+      "draws": 6,
+      "losses": 141,
+      "win_rate": 0.265,
+      "score": 0.28,
+      "score_ci95": 0.06222807083623917,
+      "mean_margin": -9.86,
+      "seconds": 12.24210786819458
+    }
+  },
+  "vs-heuristic/seed2/g050000": {
+    "games": 50000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 181,
+      "draws": 2,
+      "losses": 17,
+      "win_rate": 0.905,
+      "score": 0.91,
+      "score_ci95": 0.0396627684359022,
+      "mean_margin": 14.05,
+      "seconds": 9.125296592712402
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 110,
+      "draws": 5,
+      "losses": 85,
+      "win_rate": 0.55,
+      "score": 0.5625,
+      "score_ci95": 0.06875295448197118,
+      "mean_margin": 2.78,
+      "seconds": 10.055250406265259
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 46,
+      "draws": 4,
+      "losses": 150,
+      "win_rate": 0.23,
+      "score": 0.24,
+      "score_ci95": 0.05919070197252268,
+      "mean_margin": -11.84,
+      "seconds": 12.393214464187622
+    }
+  },
+  "vs-heuristic/seed2/g100000": {
+    "games": 100000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 179,
+      "draws": 7,
+      "losses": 14,
+      "win_rate": 0.895,
+      "score": 0.9125,
+      "score_ci95": 0.03916170003970717,
+      "mean_margin": 15.79,
+      "seconds": 9.910787105560303
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 121,
+      "draws": 9,
+      "losses": 70,
+      "win_rate": 0.605,
+      "score": 0.6275,
+      "score_ci95": 0.06700559640806132,
+      "mean_margin": 5.645,
+      "seconds": 9.952087163925171
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 44,
+      "draws": 5,
+      "losses": 151,
+      "win_rate": 0.22,
+      "score": 0.2325,
+      "score_ci95": 0.05854526069631939,
+      "mean_margin": -11.265,
+      "seconds": 12.288483619689941
+    }
+  },
+  "vs-heuristic/seed2/g150000": {
+    "games": 150000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 177,
+      "draws": 4,
+      "losses": 19,
+      "win_rate": 0.885,
+      "score": 0.895,
+      "score_ci95": 0.04248613656241292,
+      "mean_margin": 14.05,
+      "seconds": 10.737147092819214
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 111,
+      "draws": 4,
+      "losses": 85,
+      "win_rate": 0.555,
+      "score": 0.565,
+      "score_ci95": 0.0687084143318706,
+      "mean_margin": 2.645,
+      "seconds": 11.140899658203125
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 44,
+      "draws": 9,
+      "losses": 147,
+      "win_rate": 0.22,
+      "score": 0.2425,
+      "score_ci95": 0.05940024873685295,
+      "mean_margin": -12.255,
+      "seconds": 12.43799901008606
+    }
+  },
+  "vs-heuristic/seed2/g200000": {
+    "games": 200000,
+    "trainer": "heuristic",
+    "random": {
+      "games": 200,
+      "wins": 176,
+      "draws": 3,
+      "losses": 21,
+      "win_rate": 0.88,
+      "score": 0.8875,
+      "score_ci95": 0.04379267918271273,
+      "mean_margin": 15.99,
+      "seconds": 10.314916133880615
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 129,
+      "draws": 4,
+      "losses": 67,
+      "win_rate": 0.645,
+      "score": 0.655,
+      "score_ci95": 0.06588268209476598,
+      "mean_margin": 5.96,
+      "seconds": 10.34548807144165
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 44,
+      "draws": 3,
+      "losses": 153,
+      "win_rate": 0.22,
+      "score": 0.2275,
+      "score_ci95": 0.05810065361078135,
+      "mean_margin": -11.365,
+      "seconds": 12.242719411849976
+    }
+  },
+  "vs-minimax-d3/seed0/g050000": {
+    "games": 50000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 171,
+      "draws": 6,
+      "losses": 23,
+      "win_rate": 0.855,
+      "score": 0.87,
+      "score_ci95": 0.04660927804632893,
+      "mean_margin": 12.335,
+      "seconds": 9.685309410095215
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 103,
+      "draws": 6,
+      "losses": 91,
+      "win_rate": 0.515,
+      "score": 0.53,
+      "score_ci95": 0.06917161845728347,
+      "mean_margin": -0.81,
+      "seconds": 10.267448902130127
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 45,
+      "draws": 5,
+      "losses": 150,
+      "win_rate": 0.225,
+      "score": 0.2375,
+      "score_ci95": 0.058978375274332535,
+      "mean_margin": -11.645,
+      "seconds": 12.453941583633423
+    }
+  },
+  "vs-minimax-d3/seed0/g100000": {
+    "games": 100000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 176,
+      "draws": 2,
+      "losses": 22,
+      "win_rate": 0.88,
+      "score": 0.885,
+      "score_ci95": 0.04421418550646387,
+      "mean_margin": 14.81,
+      "seconds": 9.611834287643433
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 104,
+      "draws": 4,
+      "losses": 92,
+      "win_rate": 0.52,
+      "score": 0.53,
+      "score_ci95": 0.06917161845728347,
+      "mean_margin": 0.375,
+      "seconds": 9.745753049850464
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 52,
+      "draws": 12,
+      "losses": 136,
+      "win_rate": 0.26,
+      "score": 0.29,
+      "score_ci95": 0.06288821193196702,
+      "mean_margin": -10.665,
+      "seconds": 12.854920864105225
+    }
+  },
+  "vs-minimax-d3/seed0/g150000": {
+    "games": 150000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 183,
+      "draws": 8,
+      "losses": 9,
+      "win_rate": 0.915,
+      "score": 0.935,
+      "score_ci95": 0.03416674113813021,
+      "mean_margin": 15.34,
+      "seconds": 10.718816041946411
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 111,
+      "draws": 8,
+      "losses": 81,
+      "win_rate": 0.555,
+      "score": 0.575,
+      "score_ci95": 0.06851244412513686,
+      "mean_margin": 2.555,
+      "seconds": 10.55898380279541
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 67,
+      "draws": 5,
+      "losses": 128,
+      "win_rate": 0.335,
+      "score": 0.3475,
+      "score_ci95": 0.06599465091960106,
+      "mean_margin": -7.9,
+      "seconds": 12.5145902633667
+    }
+  },
+  "vs-minimax-d3/seed0/g200000": {
+    "games": 200000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 183,
+      "draws": 4,
+      "losses": 13,
+      "win_rate": 0.915,
+      "score": 0.925,
+      "score_ci95": 0.03650417784309077,
+      "mean_margin": 15.135,
+      "seconds": 10.420315265655518
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 111,
+      "draws": 7,
+      "losses": 82,
+      "win_rate": 0.555,
+      "score": 0.5725,
+      "score_ci95": 0.06856411561451077,
+      "mean_margin": 3.585,
+      "seconds": 10.817664861679077
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 75,
+      "draws": 3,
+      "losses": 122,
+      "win_rate": 0.375,
+      "score": 0.3825,
+      "score_ci95": 0.0673558427309762,
+      "mean_margin": -5.825,
+      "seconds": 12.798595905303955
+    }
+  },
+  "vs-minimax-d3/seed1/g050000": {
+    "games": 50000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 173,
+      "draws": 5,
+      "losses": 22,
+      "win_rate": 0.865,
+      "score": 0.8775,
+      "score_ci95": 0.045439409657256784,
+      "mean_margin": 12.115,
+      "seconds": 11.104204654693604
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 100,
+      "draws": 6,
+      "losses": 94,
+      "win_rate": 0.5,
+      "score": 0.515,
+      "score_ci95": 0.0692652741278052,
+      "mean_margin": -0.245,
+      "seconds": 10.361239194869995
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 62,
+      "draws": 4,
+      "losses": 134,
+      "win_rate": 0.31,
+      "score": 0.32,
+      "score_ci95": 0.06465029620968492,
+      "mean_margin": -9.57,
+      "seconds": 12.490838766098022
+    }
+  },
+  "vs-minimax-d3/seed1/g100000": {
+    "games": 100000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 178,
+      "draws": 5,
+      "losses": 17,
+      "win_rate": 0.89,
+      "score": 0.9025,
+      "score_ci95": 0.04111184683275613,
+      "mean_margin": 14.56,
+      "seconds": 10.056768655776978
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 105,
+      "draws": 7,
+      "losses": 88,
+      "win_rate": 0.525,
+      "score": 0.5425,
+      "score_ci95": 0.06904567727236803,
+      "mean_margin": 0.75,
+      "seconds": 9.706929922103882
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 57,
+      "draws": 8,
+      "losses": 135,
+      "win_rate": 0.285,
+      "score": 0.305,
+      "score_ci95": 0.06380921406818924,
+      "mean_margin": -9.7,
+      "seconds": 12.61469841003418
+    }
+  },
+  "vs-minimax-d3/seed1/g150000": {
+    "games": 150000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 172,
+      "draws": 5,
+      "losses": 23,
+      "win_rate": 0.86,
+      "score": 0.8725,
+      "score_ci95": 0.04622520903143651,
+      "mean_margin": 13.63,
+      "seconds": 10.107993125915527
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 115,
+      "draws": 3,
+      "losses": 82,
+      "win_rate": 0.575,
+      "score": 0.5825,
+      "score_ci95": 0.06834665719696903,
+      "mean_margin": 2.88,
+      "seconds": 10.63381290435791
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 61,
+      "draws": 6,
+      "losses": 133,
+      "win_rate": 0.305,
+      "score": 0.32,
+      "score_ci95": 0.06465029620968492,
+      "mean_margin": -8.32,
+      "seconds": 12.141450881958008
+    }
+  },
+  "vs-minimax-d3/seed1/g200000": {
+    "games": 200000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 174,
+      "draws": 4,
+      "losses": 22,
+      "win_rate": 0.87,
+      "score": 0.88,
+      "score_ci95": 0.04503737114885815,
+      "mean_margin": 14.21,
+      "seconds": 10.234111070632935
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 119,
+      "draws": 3,
+      "losses": 78,
+      "win_rate": 0.595,
+      "score": 0.6025,
+      "score_ci95": 0.06782474437843464,
+      "mean_margin": 3.5,
+      "seconds": 10.918304920196533
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 80,
+      "draws": 3,
+      "losses": 117,
+      "win_rate": 0.4,
+      "score": 0.4075,
+      "score_ci95": 0.06810030506539601,
+      "mean_margin": -6.415,
+      "seconds": 12.432370901107788
+    }
+  },
+  "vs-minimax-d3/seed2/g050000": {
+    "games": 50000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 171,
+      "draws": 6,
+      "losses": 23,
+      "win_rate": 0.855,
+      "score": 0.87,
+      "score_ci95": 0.04660927804632893,
+      "mean_margin": 12.87,
+      "seconds": 10.393710136413574
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 84,
+      "draws": 13,
+      "losses": 103,
+      "win_rate": 0.42,
+      "score": 0.4525,
+      "score_ci95": 0.06898305552815125,
+      "mean_margin": -1.575,
+      "seconds": 10.011855840682983
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 45,
+      "draws": 3,
+      "losses": 152,
+      "win_rate": 0.225,
+      "score": 0.2325,
+      "score_ci95": 0.05854526069631939,
+      "mean_margin": -11.11,
+      "seconds": 12.287376403808594
+    }
+  },
+  "vs-minimax-d3/seed2/g100000": {
+    "games": 100000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 171,
+      "draws": 7,
+      "losses": 22,
+      "win_rate": 0.855,
+      "score": 0.8725,
+      "score_ci95": 0.04622520903143651,
+      "mean_margin": 13.65,
+      "seconds": 11.355731725692749
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 110,
+      "draws": 7,
+      "losses": 83,
+      "win_rate": 0.55,
+      "score": 0.5675,
+      "score_ci95": 0.06866209689486624,
+      "mean_margin": 0.335,
+      "seconds": 10.497908592224121
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 64,
+      "draws": 8,
+      "losses": 128,
+      "win_rate": 0.32,
+      "score": 0.34,
+      "score_ci95": 0.06565268615982137,
+      "mean_margin": -8.505,
+      "seconds": 12.632753610610962
+    }
+  },
+  "vs-minimax-d3/seed2/g150000": {
+    "games": 150000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 176,
+      "draws": 5,
+      "losses": 19,
+      "win_rate": 0.88,
+      "score": 0.8925,
+      "score_ci95": 0.04292886616252519,
+      "mean_margin": 14.655,
+      "seconds": 11.696617841720581
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 103,
+      "draws": 3,
+      "losses": 94,
+      "win_rate": 0.515,
+      "score": 0.5225,
+      "score_ci95": 0.06922626633005713,
+      "mean_margin": 1.395,
+      "seconds": 10.557592868804932
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 57,
+      "draws": 6,
+      "losses": 137,
+      "win_rate": 0.285,
+      "score": 0.3,
+      "score_ci95": 0.06351125884439703,
+      "mean_margin": -9.225,
+      "seconds": 12.545473575592041
+    }
+  },
+  "vs-minimax-d3/seed2/g200000": {
+    "games": 200000,
+    "trainer": "minimax-d3",
+    "random": {
+      "games": 200,
+      "wins": 175,
+      "draws": 3,
+      "losses": 22,
+      "win_rate": 0.875,
+      "score": 0.8825,
+      "score_ci95": 0.04462902138743355,
+      "mean_margin": 15.87,
+      "seconds": 10.399713277816772
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 114,
+      "draws": 7,
+      "losses": 79,
+      "win_rate": 0.57,
+      "score": 0.5875,
+      "score_ci95": 0.06822711154665716,
+      "mean_margin": 3.375,
+      "seconds": 11.115809440612793
+    },
+    "minimax-d3": {
+      "games": 200,
+      "wins": 66,
+      "draws": 3,
+      "losses": 131,
+      "win_rate": 0.33,
+      "score": 0.3375,
+      "score_ci95": 0.06553463778796675,
+      "mean_margin": -8.84,
+      "seconds": 12.416149377822876
+    }
+  }
+}

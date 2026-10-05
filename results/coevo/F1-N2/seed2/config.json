@@ -1,0 +1,114 @@
+{
+  "run": "F1-N2",
+  "out": "results/coevo",
+  "board_size": 6,
+  "eval_every": 5000,
+  "checkpoint_every": 25000,
+  "eval_openings": 100,
+  "final_eval_openings": 500,
+  "opening_plies": 6,
+  "eval_seed": 4242,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "eps_start": 0.3,
+  "eps_end": 0.05,
+  "eps_decay_frac": 0.5,
+  "learner": {
+    "type": "dqn",
+    "kwargs": {
+      "double": true
+    }
+  },
+  "opponent": {
+    "type": "minimax",
+    "kwargs": {
+      "depth": 3,
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      }
+    }
+  },
+  "final_opponents": {
+    "minimax-d2": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 2,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "minimax-d3": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 3,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "random": {
+      "type": "random"
+    },
+    "heuristic": {
+      "type": "heuristic",
+      "kwargs": {
+        "epsilon": 0.05,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "minimax-d4": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 4,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    }
+  },
+  "runs": {
+    "F1-N2": {
+      "population": 2,
+      "games_per_member": 200000
+    },
+    "F1-N4": {
+      "population": 4,
+      "games_per_member": 200000
+    },
+    "F1-N8": {
+      "population": 8,
+      "games_per_member": 200000
+    },
+    "F2-N4": {
+      "population": 4,
+      "games_per_member": 100000
+    },
+    "F2-N8": {
+      "population": 8,
+      "games_per_member": 50000
+    }
+  },
+  "seed": 2,
+  "games_per_member": 200000
+}

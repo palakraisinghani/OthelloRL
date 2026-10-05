@@ -103,7 +103,8 @@ def train(learner: Learner, cfg: dict, out_dir: Path, reward_fn=None, pool=None)
     out_dir.mkdir(parents=True, exist_ok=True)
     seed = cfg["seed"]
     rng = random.Random(seed + 7)
-    opp = make_agent(cfg["opponent"], env, seed=seed + 11)
+    # training opponent (defaults to the learning-curve opponent, as in Phase 1)
+    opp = make_agent(cfg.get("train_opponent", cfg["opponent"]), env, seed=seed + 11)
     eval_opp = make_agent(cfg["opponent"], env, seed=10_000 + seed)
     eval_openings = make_openings(env, cfg["eval_openings"], cfg["opening_plies"], cfg["eval_seed"])
     total = cfg["train_games"]

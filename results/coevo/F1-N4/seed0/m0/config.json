@@ -1,0 +1,15 @@
+{
+  "run": "coevo-member",
+  "board_size": 6,
+  "population_run": "F1-N4",
+  "member": 0,
+  "member_seed": 0,
+  "runs": {
+    "coevo-member": {
+      "learner": "dqn",
+      "kwargs": {
+        "double": true
+      }
+    }
+  }
+}

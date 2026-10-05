@@ -103,7 +103,33 @@ Extend `dqn.py` with Double DQN and opponent-pool self-play.
 
 **Step 2.8 — Comparison table**
 Columns: final win rate, games to reach the threshold (e.g. 80% vs heuristic), wall-clock time, and variance across seeds. As an extra check, 6x6 is weakly solved (perfect play ends 16–20, a second-player win), so compare the best agent's self-play against that result.
-*Done when:* the table and checkpoints are saved and a winner is chosen. The winner is released as **Oroletto** (may be replaced by a stronger Phase 5 model): point `models/oroletto.json` at its run directory so `othello --play oroletto` loads it.
+*Done when:* the table and checkpoints are saved and a winner is chosen. The winner is released as **Oroletto** (may be replaced by a stronger Phase 4 model): point `models/oroletto.json` at its run directory so `othello --play oroletto` loads it.
+
+**Step 2.9 — Motivation: the frozen target of a fixed opponent** — ✅ done (frozen target clear for random/heuristic; self-play beats every fixed-opponent DQN head-to-head)
+- **Why:** to motivate self-play. A fixed opponent is a *frozen learning target*. Once the learner beats it reliably, almost every game is a win, which carries little information, so progress stalls. Self-play has no frozen target: the opponent improves with the learner. ("Capped at the opponent's strength" is too strong a claim: Phase 1's DQN, trained only against heuristic, beats it 65% of the time.)
+- **Objective & expectation:**
+  - **Objective:** show how training against a fixed opponent stalls, compared with self-play.
+  - **Expectations** (hypotheses):
+    - **(a)** each learner's score *against its own trainer* rises and then plateaus, while its general strength (against the other bots and the other learners) stops improving;
+    - **(b)** strength across learners orders by trainer (random < heuristic < minimax-d3), mainly because a stronger trainer gives a better learning signal, not a higher "ceiling";
+    - **(c)** the self-play DQN (Phase 3, p = 0) matches or beats every fixed-opponent DQN.
+  - **Possible inverted U:** against random almost every game is a win, and against minimax-d3 most are losses. Both ends are weak signals, so the d3 learner may not end up strongest. That would still favour self-play, which is always evenly matched.
+- **Methodology:**
+  - Three learners (DQN1, DQN2, DQN3), identical to Phase 3's self-play DQN (Double DQN, same network, buffer and schedule). The only difference is the training opponent: random, heuristic (ε = 0.05) or minimax-d3.
+  - **Comparison groups:**
+    - the three fixed-opponent learners;
+    - the self-play DQN;
+    - **Phase 1's classical (vanilla) DQN**, also trained only against heuristic, which also shows whether Double DQN matters.
+- **Experiment details:**
+  - **Config:** `configs/fixed_opponent_dqn.yaml`, with runs `vs-random`, `vs-heuristic`, `vs-minimax-d3` × seeds {0, 1, 2} × 200k games; random 6-ply openings; alternating colours; checkpoints every 50k games.
+  - **Learning curve:** every 5k games, 200 games against **minimax-d2**, which none of the three trains against.
+  - **Final evaluation** (openings seed 4243): random, heuristic and d2/d3/d4 (1,000 games each). The Phase 1 classical DQN is additionally evaluated against d2 and d3 (stage `panel`).
+  - **Trainer curves (central figure):** each run's checkpoints at 50k, 100k, 150k and 200k play its own trainer and each other fixed bot, 200 games each (stage `trainer`).
+  - **Head-to-head round robin:** 5 groups (DQN-random, DQN-heuristic, DQN-d3, self-play DQN, classical DQN), all 9 seed pairs per group pair, 200 games each. That's 10 group pairs × 1,800 games (stage `h2h`).
+  - **Statistics:** mean ± std over seeds; 95% CIs per pairing; a seed-level bootstrap CI for each group-vs-group score. No pass/fail criteria are fixed in advance.
+  - **Output:** `results/fixed_opponent/`. The report gets a new first subsection of Section 5, "Why self-play? The frozen target of a fixed opponent", which answers the boxed *Point to Ponder* in Section 4.3.4.
+  - **Resources:** 9 runs (the d3 arm is ~2.5× slower) plus ~1 h of evaluation.
+- *Done when:* the trainer curves, the bot-panel table, the bars and the 5×5 head-to-head matrix are in the report, with hypotheses (a)–(c) discussed.
 
 ---
 
@@ -277,23 +303,143 @@ Columns: final win rate, games to reach the threshold (e.g. 80% vs heuristic), w
 
 ---
 
-## Phase 4: Exploiters & Blind-Spot Analysis (6x6, ~1.5 weeks)
+## Phase 4: Multi-Agent Co-Evolution vs Self-Play (6x6, ~1.5 weeks) — ✅ done (co-evolution ties self-play at equal games per agent; weaker at equal total games; no extra diversity, no cycles)
 
-**Question:** where are our agents' blind spots, and how exploitable is each one? Targets are all 11 agents: 3 rule-based, 5 traditional, and the Phase 2 finals (DQN+, PPO, Oroletto), plus the Phase 3 league-trained DQN models.
+**Question:** do several *independent* DQN agents (separate networks and learners), learning only by playing each other, become better or more robust than DQN trained by self-play?
+
+**Design (decided 2026-10-05):**
+- **Learner:** DQN first (identical to the Phase 3 / Step 2.9 self-play DQN). An AlphaZero population is optional, run only if DQN shows an effect.
+- **Population sizes:** N ∈ {2, 4, 8}.
+- **Pairing:** uniform. Each game is between two different members chosen at random; members never play their own copy. Strength-matched and PFSP pairing are deferred.
+- **Budget, reported both ways:**
+  - **F1 (primary): equal games per agent.** Each member plays 200k games, like each self-play DQN.
+  - **F2: equal total games.** The population shares 200k games, so 2 × 200k / N per member. N = 2 is identical in F1 and F2.
+
+**Motivation:**
+- Phase 3 found that a *weak, fixed* league hurts DQN. But it changed variety and opponent strength at once, since most league games were lopsided. In co-evolution the opponents are varied *and* adaptive, and roughly matched because they learn too. That separates "variety" from "mismatched strength".
+- Self-play sees only its own style. Independent agents may find different strategies and probe each other's weaknesses (competitive co-evolution; population-based training; AlphaStar's league).
+- Populations can cycle (rock-paper-scissors) instead of improving. Whether Othello allows this is itself a result.
+- Each co-evolution game trains *two* learners, whereas self-play DQN learns from one side only.
+
+**Hypotheses** (predictions to test):
+- **H1, per-agent strength (F1):** the average member is about level with self-play DQN.
+- **H2, matched variety:** co-evolution does **not** show Phase 3's decline. If it does, variety itself hurts DQN, not just mismatched opponents.
+- **H3, diversity:** members' policies differ *more* than independent self-play seeds do. If not, the population has collapsed into one strategy.
+- **H4, robustness:** any gain is largest against unseen *learned* opponents (Phase 2 PPO and DQN+) rather than the minimax bots.
+- **H5, transitivity:** Othello is largely transitive, so there are few or no significant rock-paper-scissors cycles among members.
+- **H6, population size:** larger N gives more diversity but slower early progress per agent.
+- **H7, equal compute (F2):** at N = 4, training two learners per game partly offsets the split budget. At N = 8 (only 50k games each), members are weaker than self-play.
+
+---
+
+**Run order:** Phase 4's training (Steps 4.3–4.4, all 15 runs via `scripts/train_coevo.py --all`) starts automatically once Step 2.9's evaluation has finished, so the two don't compete for cores.
+
+**Step 4.1 — Population trainer (DQN)** — ✅ done (`othello/rl/population.py`, `scripts/train_coevo.py`, `configs/coevo_dqn.yaml`; smoke run OK)
+- **Why:** the existing training loop (`othello/rl/common.py:train`) trains one learner against an opponent. Co-evolution needs N learners trained in the same games.
+- **Objective & expectation:** a trainer in which each game pairs two members and **both** learn from their own moves. Each member's game count, exploration schedule and logging behave exactly as for a single DQN, so results are directly comparable.
+- **Methodology:**
+  - New `othello/rl/population.py`: a list of N `DQNLearner`s, each with its own seed, network, replay buffer and optimiser.
+  - **Each game:**
+    1. draw an ordered pair (i, j), i ≠ j, uniformly;
+    2. alternate colours;
+    3. start from a random 6-ply opening;
+    4. both members act ε-greedily under their own ε schedule, which runs on their own game count;
+    5. after the game, `learner_i.end_episode(traj_i)` and `learner_j.end_episode(traj_j)`.
+  - Reuses the evaluation, checkpointing and CSV logging of `common.train`.
+- **Experiment details:**
+  - **Logging:** per member, every 5k of *its own* games: score against minimax-d3 (held-out, 200 games) and score against each other member in training, giving the win-rate matrix over time.
+  - **Checkpoints:** every 25k of each member's games.
+  - **Config:** `configs/coevo_dqn.yaml`, with keys `population: N`, `games_per_member`, `pairing: uniform`.
+  - **Tests:**
+    - pairs are uniform and never i = i;
+    - every member's game count is within ±2% of the others after 10k games;
+    - both trajectories are recorded with the right player perspective.
+  - **Smoke run:** N = 2 for 5k games per member.
+- *Done when:* tests pass and the smoke run logs both members' curves and their pairwise scores.
+
+**Step 4.2 — Diversity and non-transitivity measures** — ✅ done (baseline: independent self-play DQN seeds disagree on 57% of positions)
+- **Why:** H3 and H5 need measures that strength scores alone don't give.
+- **Objective & expectation:** two reusable metrics, each with a baseline from *independent self-play seeds*, because some diversity exists even without co-evolution.
+- **Methodology:**
+  - **Policy disagreement:** a fixed set of 1,000 positions, sampled from games between the reference bots and earlier learners (seed 6161). For two agents, the fraction of positions where their greedy moves differ.
+    - Population diversity = mean over member pairs.
+    - Baseline = mean over pairs of the 3 Phase 3 self-play DQN seeds.
+  - **Non-transitivity:** from the head-to-head matrix between members (final, and per checkpoint), count directed 3-cycles A > B > C > A where every edge's 95% CI excludes 50%.
+- **Experiment details:** `scripts/population_metrics.py`, with output to `results/coevo/diversity.json` and `results/coevo/cycles.json`. Unit tests on toy matrices with a known cycle and on a transitive matrix.
+- *Done when:* the metrics run on the Phase 3 self-play seeds and give the baseline disagreement.
+
+**Step 4.3 — F1 runs: equal games per agent** — ✅ done
+- **Why:** the primary, scientific comparison: the same experience per agent, against varied adaptive opponents instead of itself.
+- **Objective & expectation:** N ∈ {2, 4, 8} × 3 seeds. Members roughly level with self-play (H1), with no Phase 3-style decline (H2).
+- **Methodology:** 200k games per member, so 200k / 400k / 800k total games per run. Hyperparameters are identical to the self-play DQN.
+- **Experiment details:**
+  - 9 runs in parallel on 8 cores.
+  - Estimated wall time is dominated by N = 8: ~800k games, with 2 learners updating per game, ~10 h. N = 2 and 4 take ~2.5 and ~5 h.
+  - Output to `results/coevo/F1/N{n}/seed{k}/m{i}/`.
+- *Done when:* all members of all runs have `final.json` and checkpoints.
+
+**Step 4.4 — F2 runs: equal total games** — ✅ done
+- **Why:** the practical comparison: with one self-play run's budget, is a population a better use of it?
+- **Objective & expectation:** N ∈ {4, 8} × 3 seeds with 200k total games: 100k / 50k per member. N = 2 is the F1 run. Members weaker at N = 8. N = 4 is the interesting case (H7).
+- **Methodology:** same trainer; `games_per_member = 2 × 200k / N`. The ε schedule decays over the first half of *each member's* budget, as everywhere else.
+- **Experiment details:** 6 runs, each about the cost of one self-play run (~2–3 h); they run in parallel after or alongside F1 if cores allow. Output to `results/coevo/F2/N{n}/seed{k}/`.
+- *Done when:* all runs have `final.json` and checkpoints.
+
+**Step 4.5 — Evaluation against self-play and the held-out panel** — ✅ done (minimax scores taken from each member's end-of-training evaluation: 500 games per depth)
+- **Why:** decides H1, H2, H4, H6 and H7, with the same protocol as Phase 3 and Step 2.9, so all of them are comparable.
+- **Objective & expectation:** per configuration, the average member and the best member compared with the self-play DQN (Phase 3, p = 0, 3 seeds).
+- **Methodology:** for every member of every run:
+  - head-to-head against the 3 self-play DQN seeds (200 games each);
+  - minimax-d2 and d3 (1,000 games each);
+  - Phase 2 PPO and DQN+ (3 seeds each, 200 games each);
+  - random, heuristic and minimax-d4 (1,000 games each).
+- **Experiment details:**
+  - **Primary statistic:** the **average member's** score against self-play, with a seed-level bootstrap 95% CI (resampling population seeds and self-play seeds).
+  - **Best member:** chosen using **games within the population only**, never the test results, and reported flagged as best-of-N.
+  - **Checkpoint curves:** each member's checkpoints against minimax-d3 and PPO seed 0 (H6: early-progress speed).
+  - Output: `results/coevo/eval.json` and `results/coevo/ckpt_curves.json`; script `scripts/eval_coevo.py`, modelled on `scripts/eval_phase3.py`.
+- *Done when:* every model's results file exists, with bootstrap CIs and checkpoint curves.
+
+**Step 4.6 — Population dynamics** — ✅ done
+- **Why:** does co-evolution produce progress, cycling or collapse (H3, H5)?
+- **Objective & expectation:** strength over time per member, diversity against the self-play baseline, and cycle counts. Expected: diversity above baseline, few or no significant cycles.
+- **Methodology:** apply the Step 4.2 metrics to every population:
+  - final members: disagreement and the head-to-head matrix (all member pairs, 200 games each);
+  - each member's checkpoints: the win-rate matrix over time, from the training logs and checkpoint matches.
+- *Done when:* figures exist for strength over time, diversity vs baseline, and cycle counts.
+
+**Step 4.7 (optional) — AlphaZero population** — ⏭ skipped (DQN showed no co-evolution effect; the batched runner moves to Phase 5, where the exploiters need it)
+- **Why:** run only if DQN shows a co-evolution effect worth confirming with the strongest learner.
+- **Methodology:**
+  - First build the **generic batched game runner** (`run_games` in `othello/rl/alphazero/selfplay.py`). Each side is an MCTS player or a plain `Agent`, with search batched per MCTS player. `az_evaluate` and self-play become thin wrappers, and the existing AlphaZero tests must still pass. Phase 5's exploiters reuse it.
+  - Then N = 4, 30k games per member × 3 seeds, compared with the 30k-game AlphaZero self-play baseline.
+- *Done when:* the decision to run or skip is recorded; if run, its results join Step 4.5's tables.
+
+**Step 4.8 — Report section "Co-Evolution vs Self-Play"** — ✅ done
+- **Why:** documents the result, including the case where self-play wins.
+- **Objective & expectation:** a section in the same style as Phase 3, with H1–H7 explicitly confirmed or refuted.
+- **Methodology:** assets from `scripts/make_report_assets.py`:
+  - average and best member vs self-play by N (F1 and F2 side by side);
+  - the held-out panel bars;
+  - checkpoint curves;
+  - diversity vs the self-play-seed baseline;
+  - head-to-head heat-maps and cycle counts.
+- *Done when:* the report compiles without undefined references and the new pages have been checked visually.
+
+---
+
+## Phase 5: Exploiters & Blind-Spot Analysis (6x6, ~1.5 weeks)
+
+**Question:** where are our agents' blind spots, and how exploitable is each one? Targets are all 11 agents: 3 rule-based, 5 traditional, and the Phase 2 finals (DQN+, PPO, Oroletto), plus the Phase 3 league-trained DQN models and the Phase 4 co-evolved population models.
 **⚠ Design to be discussed before starting.**
 - **Exploiter type:** proposed default is an AlphaZero exploiter whose search models the victim with the victim's own network (A-MCTS, Wang et al. 2023). Alternatives are a PPO exploiter, or both.
 - **Analysis scope:** proposed default is an exact-solver audit of all agents, plus exploiters trained only against the strong agents.
 
-**Step 4.0 — Generic batched game runner** *(moved here from Phase 3)*
-- **Why:** AlphaZero exploiters (4.4) and AZ-vs-AZ or AZ-vs-agent transfer matches (4.5) need a game loop where either side can be an MCTS player or a plain agent. Phase 5's populations need it too.
-- **Methodology:** `run_games(games)` in `othello/rl/alphazero/selfplay.py`. Each step groups games by the player to move, plain agents move directly, and each MCTS player runs one batched search. `az_evaluate` and self-play become thin wrappers.
-- *Done when:* the existing AlphaZero tests pass, and new tests cover MCTS-vs-Agent and MCTS-vs-MCTS.
-
-**Step 4.1 — Exact endgame solver**
+**Step 5.1 — Exact endgame solver**
 Alpha-beta search on the exact final disc margin, with a transposition table and move ordering. It solves any 6x6 position with ≤ E empty squares; E (~12–14) is set by timing.
 *Done when:* it matches brute force on 4x4 games and on random 6x6 positions with few empties, and the time per solve is recorded.
 
-**Step 4.2 — Blunder audit**
+**Step 5.2 — Blunder audit**
 Each agent plays the same set of openings against a shared panel of opponents. At every position with ≤ E empties, the solver labels the agent's move as:
 - **optimal**;
 - **inaccurate:** it loses discs but not the result;
@@ -301,7 +447,7 @@ Each agent plays the same set of openings against a shared panel of opponents. A
 
 *Done when:* `results/blindspots/audit_<agent>.jsonl` exists for all agents, with per-move labels and position features.
 
-**Step 4.3 — Blind-spot taxonomy**
+**Step 5.3 — Blind-spot taxonomy**
 Describe each audited position by:
 - game phase (number of empties);
 - the square class of the move and of the best move (corner, X, C, edge, interior);
@@ -313,69 +459,27 @@ Describe each audited position by:
 Compare blunder rates per category and per agent, normalised per move.
 *Done when:* there is a table and figure of blunder rate by category × agent.
 
-**Step 4.4 — Exploiter training**
+**Step 5.4 — Exploiter training**
 Train an exploiter against a frozen Oroletto, which plays with its evaluation settings, and against Phase 2 PPO and the best Phase 3 DQN model. Save checkpoints.
 *Done when:* each exploiter's win rate against its victim is logged over training.
 
-**Step 4.5 — Exploitability and transfer**
+**Step 5.5 — Exploitability and transfer**
 Each exploiter plays all 11 agents (and the Phase 3 models): a transfer matrix of exploiter × target. Do one model's weaknesses carry over to the others?
 *Done when:* the matrix is produced, with confidence intervals.
 
-**Step 4.6 — What do exploiters exploit?**
-Run the 4.2 audit on the victim's moves in exploiter games and compare them with its moves in ordinary games:
+**Step 5.6 — What do exploiters exploit?**
+Run the 5.2 audit on the victim's moves in exploiter games and compare them with its moves in ordinary games:
 - which categories become over-represented;
 - which openings and positions the exploiter steers into.
 
 Build an annotated gallery of the most instructive losses (from `replay.py`).
 *Done when:* the main blind spots are named and illustrated with board diagrams.
 
-**Step 4.7 — Link back to Phase 3**
+**Step 5.7 — Link back to Phases 3 and 4**
 Are league-trained DQN models less exploitable than the self-play DQN (p = 0)?
 *Done when:* an exploitability comparison table exists.
 
-**Step 4.8 — Report section "Blind Spots and Exploitability"**
-*Done when:* it compiles and the pages have been checked.
-
----
-
-## Phase 5: Multi-Agent Co-Evolution vs Self-Play (6x6, ~1.5 weeks)
-
-**Question:** do several *independent* agents (separate networks, separate learners), learning by playing each other, end up better or more robust than agents trained by self-play?
-**⚠ Design to be discussed before starting.** Decisions:
-- **population size N** (proposed: 4);
-- **homogeneous vs heterogeneous algorithms**, e.g. all-AlphaZero vs a PPO + DQN+ + AlphaZero mix (proposed: try PPO populations first because they are cheap, then AlphaZero);
-- **matchmaking** (proposed: uniform among the other members; strength-matched by recent win rate as a variant);
-- **budget fairness** (proposed: report both equal games per agent and equal total compute).
-
-**Step 5.1 — Population trainer**
-N agents, each with its own network, optimiser and replay buffer. Every training game pairs two *different* members, so there are no games against itself. Each member learns only from its own moves. It reuses the Phase 4 `run_games` runner and the Phase 3 League sampler (as a matchmaker), and saves checkpoints for every member.
-*Done when:* a smoke run with N = 2 trains both members and logs the pairwise results.
-
-**Step 5.2 — PPO populations**
-N ∈ {2, 4} (8 if cheap enough) × 3 seeds, with the same per-agent game budget as Phase 2 PPO.
-*Done when:* all runs finish with checkpoints.
-
-**Step 5.3 — AlphaZero population**
-N = 4, 30k games per agent × 3 seeds, then confirm at full budget if it is promising.
-*Done when:* all runs finish.
-
-**Step 5.4 — Comparison with self-play**
-For each member and for the population's best:
-- head-to-head against the self-play model at the same budget;
-- matches against held-out anchors (minimax-d6, Oroletto);
-- exploitability, using the Phase 4 exploiters (transfer).
-
-*Done when:* there is a comparison table at equal per-agent games and at equal total compute.
-
-**Step 5.5 — Population dynamics**
-- Track each member's strength over time: its checkpoints' scores against fixed anchors (minimax-d2/d3/d4, Oroletto) and a win-rate matrix between checkpoints.
-- Check for **non-transitivity**: count rock-paper-scissors cycles among checkpoints (A > B > C > A).
-- Measure **diversity** between members: how often their policies disagree on a fixed set of positions.
-
-Does co-evolution produce cycling or real progress?
-*Done when:* there are figures for strength over time, the cycle count and diversity.
-
-**Step 5.6 — Report section "Co-Evolution vs Self-Play"**
+**Step 5.8 — Report section "Blind Spots and Exploitability"**
 *Done when:* it compiles and the pages have been checked.
 
 ---
@@ -396,6 +500,35 @@ Against the 8x8 heuristic and minimax bots. Optionally, add an Edax subprocess b
 
 **Step 6.5 — Notes**
 Record which 6x6 conclusions (Phases 2–5) held at 8x8 and which changed.
+
+**Step 6.6 — Export the 8x8 model for the Othello-Player app**
+- **Why:** the app (separate repo `O-Rolleto-PlayOthello`, SPEC §4.2) is **8×8 only**. All four of its levels are played by this one model. There is **no distillation**.
+- **Methodology:**
+  - `scripts/export_onnx.py`: export the 8x8 network to ONNX (input `[batch, 3, 8, 8]`; outputs `policy_logits [batch, 65]` and `value [batch]`).
+  - Check that ONNX and PyTorch outputs agree within 1e-5 on a few hundred positions.
+  - Write a manifest with planes, c_puct, provenance (run id, commit) and the SHA-256 of the `.onnx` file.
+  - Write golden fixtures for the app's parity tests: positions, network outputs, and greedy MCTS moves at fixed simulation counts.
+- *Done when:* the `.onnx` file, the manifest and the fixtures are ready to copy into the app repo.
+
+**Step 6.7 — Calibrate the app's four difficulty levels (8x8)**
+- **Why:** the app's levels (SPEC §3.3) are the same model with different search settings. Their placeholder values must be tuned so each level is clearly stronger than the one below.
+- **Methodology:**
+  - Add move-choice settings to `AZAgent` (`othello/rl/alphazero/selfplay.py`):
+    - **temperature T applied to the visit counts:** the move is sampled with probability ∝ N^(1/T), using the existing `MCTS.choose`; T = 0 is greedy;
+    - **root Dirichlet noise** with weight ε.
+  - Start from the SPEC table:
+
+    | Level | Simulations | T | ε |
+    |---|---|---|---|
+    | Easy | ~10 | 1.0 | 0.3 |
+    | Medium | ~50 | 0.5 | 0 |
+    | Hard | ~200 | 0.1 | 0 |
+    | Master | ~800, or as many as fit 2 s per move | 0 | 0 |
+
+  - Play adjacent levels against each other (400 games, standard protocol), and each level against the 8x8 reference bots.
+  - Adjust until each level beats the one below at least 70% of the time.
+  - Check that every level stays within 2 s per move on an ordinary laptop.
+- *Done when:* the final per-level values are written into the app's model manifest, with a calibration table (and a short report note).
 
 ---
 
@@ -428,7 +561,7 @@ Win rate of each model (8x8-only, mixed, curriculum) on each test size, against 
 - **Why:** a single strength scale for the whole project, placing every agent from every phase side by side.
 - **Methodology:**
   - Fit Bradley–Terry Elo (`othello/eval/elo.py`) on 6x6, with random = 0.
-  - Players: the rule-based bots, the Phase 1 agents, the Phase 2 agents, the Phase 3 league DQNs, and the Phase 5 population models.
+  - Players: the rule-based bots, the Phase 1 agents, the Phase 2 agents, the Phase 3 league DQNs, and the Phase 4 population models.
   - Data: existing results files plus any extra games needed to connect the comparison graph (e.g. a minimax-d6 anchor above Oroletto).
   - Check: every predicted score must fall within the observed score's confidence interval. Agents with large residuals, such as opponent-exploiting MC control, are flagged.
 - *Done when:* the Elo table and chart, with the consistency check, are in the final report.
