@@ -1,0 +1,58 @@
+{
+  "weights": {
+    "disc": 1,
+    "mobility": 5,
+    "corner": 50,
+    "xsquare": -25
+  },
+  "sizes": {
+    "8": {
+      "matches": [
+        {
+          "a": "minimax-d4",
+          "b": "heuristic",
+          "games": 600,
+          "wins": 593,
+          "draws": 1,
+          "losses": 6,
+          "win_rate": 0.9883333333333333,
+          "score": 0.9891666666666666,
+          "score_ci95": 0.008283163535035894,
+          "mean_margin": 41.08833333333333,
+          "seconds": 85.23916816711426
+        },
+        {
+          "a": "minimax-d4",
+          "b": "random",
+          "games": 600,
+          "wins": 600,
+          "draws": 0,
+          "losses": 0,
+          "win_rate": 1.0,
+          "score": 1.0,
+          "score_ci95": 8.001666493091715e-08,
+          "mean_margin": 44.38166666666667,
+          "seconds": 83.40112948417664
+        },
+        {
+          "a": "heuristic",
+          "b": "random",
+          "games": 600,
+          "wins": 555,
+          "draws": 8,
+          "losses": 37,
+          "win_rate": 0.925,
+          "score": 0.9316666666666666,
+          "score_ci95": 0.020189568080057074,
+          "mean_margin": 29.656666666666666,
+          "seconds": 1.6670582294464111
+        }
+      ],
+      "elo": {
+        "heuristic": 453.9341262781808,
+        "minimax-d4": 1232.3139628681317,
+        "random": 0.0
+      }
+    }
+  }
+}

@@ -117,20 +117,29 @@ def az_evaluate(net, env, opp: Agent, openings, sims, seed=0, c_puct=1.5) -> dic
 
 
 class AZAgent(Agent):
-    """Playable AlphaZero agent: MCTS with `sims` simulations, greedy move choice."""
+    """Playable AlphaZero agent: MCTS with `sims` simulations per move.
 
-    def __init__(self, env, net, sims=200, seed=None, name="alphazero", c_puct=1.5):
+    Difficulty settings (as in the Othello-Player app, SPEC section 3.3):
+      temperature: the move is sampled with probability proportional to N^(1/T)
+                   over the root's visit counts N; T = 0 plays the most-visited move.
+      noise:       weight epsilon of Dirichlet(dirichlet_alpha) noise mixed into the
+                   root priors before searching; 0 disables it.
+    """
+
+    def __init__(self, env, net, sims=200, seed=None, name="alphazero", c_puct=1.5,
+                 temperature=0.0, noise=0.0, dirichlet_alpha=0.5):
         super().__init__(env, seed)
         self.net, self.sims, self.name = net.eval(), sims, name
-        self.mcts = MCTS(env, Evaluator(env, net), c_puct=c_puct,
-                         rng=np.random.default_rng(seed))
+        self.temperature, self.noise = temperature, noise
+        self.mcts = MCTS(env, Evaluator(env, net), c_puct=c_puct, dirichlet_alpha=dirichlet_alpha,
+                         noise_frac=noise, rng=np.random.default_rng(seed))
 
     def act(self, state):
         moves = self.env.legal_moves(state)
         if len(moves) == 1:
             return moves[0]
-        root = self.mcts.search([Node(state)], self.sims, add_noise=False)[0]
-        return self.mcts.choose(root, 0)
+        root = self.mcts.search([Node(state)], self.sims, add_noise=self.noise > 0)[0]
+        return self.mcts.choose(root, self.temperature)
 
 
 class PolicyOnlyAgent(Agent):

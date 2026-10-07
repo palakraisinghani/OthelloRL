@@ -408,10 +408,10 @@ Columns: final win rate, games to reach the threshold (e.g. 80% vs heuristic), w
   - each member's checkpoints: the win-rate matrix over time, from the training logs and checkpoint matches.
 - *Done when:* figures exist for strength over time, diversity vs baseline, and cycle counts.
 
-**Step 4.7 (optional) — AlphaZero population** — ⏭ skipped (DQN showed no co-evolution effect; the batched runner moves to Phase 5, where the exploiters need it)
+**Step 4.7 (optional) — AlphaZero population** — ⏭ skipped (DQN showed no co-evolution effect; the batched runner was never needed: Phase 6 was cancelled)
 - **Why:** run only if DQN shows a co-evolution effect worth confirming with the strongest learner.
 - **Methodology:**
-  - First build the **generic batched game runner** (`run_games` in `othello/rl/alphazero/selfplay.py`). Each side is an MCTS player or a plain `Agent`, with search batched per MCTS player. `az_evaluate` and self-play become thin wrappers, and the existing AlphaZero tests must still pass. Phase 5's exploiters reuse it.
+  - First build the **generic batched game runner** (`run_games` in `othello/rl/alphazero/selfplay.py`). Each side is an MCTS player or a plain `Agent`, with search batched per MCTS player. `az_evaluate` and self-play become thin wrappers, and the existing AlphaZero tests must still pass.
   - Then N = 4, 30k games per member × 3 seeds, compared with the 30k-game AlphaZero self-play baseline.
 - *Done when:* the decision to run or skip is recorded; if run, its results join Step 4.5's tables.
 
@@ -428,80 +428,32 @@ Columns: final win rate, games to reach the threshold (e.g. 80% vs heuristic), w
 
 ---
 
-## Phase 5: Exploiters & Blind-Spot Analysis (6x6, ~1.5 weeks)
+## Phase 5: Scale to 8x8 (~1.5 weeks)
 
-**Question:** where are our agents' blind spots, and how exploitable is each one? Targets are all 11 agents: 3 rule-based, 5 traditional, and the Phase 2 finals (DQN+, PPO, Oroletto), plus the Phase 3 league-trained DQN models and the Phase 4 co-evolved population models.
-**⚠ Design to be discussed before starting.**
-- **Exploiter type:** proposed default is an AlphaZero exploiter whose search models the victim with the victim's own network (A-MCTS, Wang et al. 2023). Alternatives are a PPO exploiter, or both.
-- **Analysis scope:** proposed default is an exact-solver audit of all agents, plus exploiters trained only against the strong agents.
+**Design (decided 2026-10-07):**
+- **Learner:** AlphaZero, the Phase 2 winner, with a residual network of **6 blocks × 64 channels** (6x6 Oroletto used 4 × 64).
+- **Search:** **150 MCTS simulations per move** in self-play (6x6 used 64).
+- **Budget:** **3 seeds × 100k self-play games**. Other settings follow 6x6, adapted only where board size requires it (e.g. the number of temperature plies).
+- **External yardstick:** the open-source **Edax** engine, compiled from source, played at 2–3 strength levels, alongside re-tuned 8x8 heuristic and minimax bots.
+- **Packaging:** after evaluation and level calibration, the model is packaged into the Othello-Player app (Step 5.8).
+- **Run order (decided after measuring ~53 h per seed):** train **seed 0** first (~2.2 days). Then evaluate it (including Edax), calibrate the app's levels and package it into the app (Steps 5.4, 5.6–5.8). Seeds 1–2 train afterwards in the background (~4.4 days) to complete the 3-seed study (Steps 5.4–5.5, 5.9).
 
-**Step 5.1 — Exact endgame solver**
-Alpha-beta search on the exact final disc margin, with a transposition table and move ordering. It solves any 6x6 position with ≤ E empty squares; E (~12–14) is set by timing.
-*Done when:* it matches brute force on 4x4 games and on random 6x6 positions with few empties, and the time per solve is recorded.
-
-**Step 5.2 — Blunder audit**
-Each agent plays the same set of openings against a shared panel of opponents. At every position with ≤ E empties, the solver labels the agent's move as:
-- **optimal**;
-- **inaccurate:** it loses discs but not the result;
-- **a blunder:** it changes the game-theoretic result, from win to draw or loss, or from draw to loss.
-
-*Done when:* `results/blindspots/audit_<agent>.jsonl` exists for all agents, with per-move labels and position features.
-
-**Step 5.3 — Blind-spot taxonomy**
-Describe each audited position by:
-- game phase (number of empties);
-- the square class of the move and of the best move (corner, X, C, edge, interior);
-- the number of winning moves available (how hard the position is);
-- pass situations;
-- parity of empty regions;
-- the mobility difference.
-
-Compare blunder rates per category and per agent, normalised per move.
-*Done when:* there is a table and figure of blunder rate by category × agent.
-
-**Step 5.4 — Exploiter training**
-Train an exploiter against a frozen Oroletto, which plays with its evaluation settings, and against Phase 2 PPO and the best Phase 3 DQN model. Save checkpoints.
-*Done when:* each exploiter's win rate against its victim is logged over training.
-
-**Step 5.5 — Exploitability and transfer**
-Each exploiter plays all 11 agents (and the Phase 3 models): a transfer matrix of exploiter × target. Do one model's weaknesses carry over to the others?
-*Done when:* the matrix is produced, with confidence intervals.
-
-**Step 5.6 — What do exploiters exploit?**
-Run the 5.2 audit on the victim's moves in exploiter games and compare them with its moves in ordinary games:
-- which categories become over-represented;
-- which openings and positions the exploiter steers into.
-
-Build an annotated gallery of the most instructive losses (from `replay.py`).
-*Done when:* the main blind spots are named and illustrated with board diagrams.
-
-**Step 5.7 — Link back to Phases 3 and 4**
-Are league-trained DQN models less exploitable than the self-play DQN (p = 0)?
-*Done when:* an exploitability comparison table exists.
-
-**Step 5.8 — Report section "Blind Spots and Exploitability"**
-*Done when:* it compiles and the pages have been checked.
-
----
-
-## Phase 6: Scale to 8x8 (~1.5 weeks)
-
-**Step 6.1 — Re-baseline on 8x8**
+**Step 5.1 — Re-baseline on 8x8** — ✅ done (the best 8x8 weights equal the 6x6 ones; minimax-d4 beats the heuristic 99%; the heuristic beats random 93%)
 Re-tune the heuristic weights and minimax depth for 8x8, then re-run the sanity gate from Step 0.11.
 
-**Step 6.2 — Budget estimate**
+**Step 5.2 — Budget estimate** — ✅ done (measured ~470 s per 256-game iteration, ~53 h per seed including evaluation)
 Use the throughput numbers to estimate compute before launching.
 
-**Step 6.3 — Train the best configuration on 8x8**
+**Step 5.3 — Train the best configuration on 8x8**
 Only the config should change (`board_size: 8`); there should be no code changes.
 
-**Step 6.4 — Evaluate**
+**Step 5.4 — Evaluate**
 Against the 8x8 heuristic and minimax bots. Optionally, add an Edax subprocess bridge for ground-truth matches.
 
-**Step 6.5 — Notes**
-Record which 6x6 conclusions (Phases 2–5) held at 8x8 and which changed.
+**Step 5.5 — Notes**
+Record which 6x6 conclusions (Phases 2–4) held at 8x8 and which changed.
 
-**Step 6.6 — Export the 8x8 model for the Othello-Player app**
+**Step 5.6 — Export the 8x8 model for the Othello-Player app**
 - **Why:** the app (separate repo `O-Rolleto-PlayOthello`, SPEC §4.2) is **8×8 only**. All four of its levels are played by this one model. There is **no distillation**.
 - **Methodology:**
   - `scripts/export_onnx.py`: export the 8x8 network to ONNX (input `[batch, 3, 8, 8]`; outputs `policy_logits [batch, 65]` and `value [batch]`).
@@ -510,7 +462,7 @@ Record which 6x6 conclusions (Phases 2–5) held at 8x8 and which changed.
   - Write golden fixtures for the app's parity tests: positions, network outputs, and greedy MCTS moves at fixed simulation counts.
 - *Done when:* the `.onnx` file, the manifest and the fixtures are ready to copy into the app repo.
 
-**Step 6.7 — Calibrate the app's four difficulty levels (8x8)**
+**Step 5.7 — Calibrate the app's four difficulty levels (8x8)**
 - **Why:** the app's levels (SPEC §3.3) are the same model with different search settings. Their placeholder values must be tuned so each level is clearly stronger than the one below.
 - **Methodology:**
   - Add move-choice settings to `AZAgent` (`othello/rl/alphazero/selfplay.py`):
@@ -529,6 +481,31 @@ Record which 6x6 conclusions (Phases 2–5) held at 8x8 and which changed.
   - Adjust until each level beats the one below at least 70% of the time.
   - Check that every level stays within 2 s per move on an ordinary laptop.
 - *Done when:* the final per-level values are written into the app's model manifest, with a calibration table (and a short report note).
+
+**Step 5.8 — Package the model and link it into the Othello-Player app**
+- **Why:** the app (`../Othello-Player`, GitHub `O-Rolleto-PlayOthello`) is 8×8 only and plays every level with this model. It should start working as soon as the model exists.
+- **Methodology:**
+  - Copy the outputs of Steps 5.6–5.7 into the app repo, using the paths its SPEC expects:
+    - `models/oroletto-8x8.onnx`;
+    - `models/oroletto-8x8.json` (manifest: planes, c_puct, the calibrated per-level simulations / temperature / root noise, provenance, SHA-256);
+    - the parity fixtures under `tests/golden/`.
+  - The files are copied, not symlinked, so the app builds on other machines.
+  - Commit in the app repo with a short message. Don't push without asking.
+  - Report anything the app's code still needs (ONNX inference, MCTS with temperature and noise), without editing the app's code, which is developed separately.
+- *Done when:* the files are committed in the app repo and the app's model-loading check (or a quick Python load of the `.onnx` file) passes.
+
+**Step 5.9 — Report section "Scaling to 8×8"**
+- **Why:** documents the 8x8 results, what changed from 6x6, and how the app's levels were calibrated.
+- **Methodology:**
+  - Assets generated from results files, as in every other section.
+  - Prose following the experiment-report skill: motivation, methodology, results, then implications.
+- *Done when:* the report compiles without undefined references and the pages have been checked visually.
+
+---
+
+## Phase 6: Exploiters & Blind-Spot Analysis — ❌ cancelled (2026-10-07)
+
+Cancelled by the user before any work started. The design that was drafted (an exact endgame solver with a blunder audit of every agent; AlphaZero exploiters that model their victim, aimed at Oroletto, PPO and the best Phase 3 DQN; a transfer matrix; exploitability of league and co-evolved models) is kept in git history (commit `1a50d6b`) in case it is revisited.
 
 ---
 

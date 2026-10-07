@@ -127,8 +127,13 @@ def train_alphazero(cfg: dict, out_dir: Path, seed: int):
             for ex in pool.map(worker, args):
                 buf.extend(ex)
                 positions += len(ex)
+            prev = games
             games += n_games
             it += 1
+            ck = cfg.get("checkpoint_every")
+            if ck and games // ck > prev // ck:
+                (out_dir / "ckpt").mkdir(exist_ok=True)
+                torch.save(net.state_dict(), out_dir / "ckpt" / f"g{games:06d}.pt")
             # ---- training
             net.train()
             steps = cfg["train_steps"] if len(buf) >= cfg["min_buffer"] else 0
@@ -150,6 +155,10 @@ def train_alphazero(cfg: dict, out_dir: Path, seed: int):
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
+                # keep weights out of the denormal range (flush_denormal may not reach every intra-op thread)
+                with torch.no_grad():
+                    for prm in net.parameters():
+                        prm.masked_fill_(prm.abs() < 1e-30, 0.0)
                 losses.append((loss_pi.item(), loss_v.item()))
         net.eval()
         torch.save(net.state_dict(), out_dir / "model.pt")

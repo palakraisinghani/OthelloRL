@@ -148,7 +148,9 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("stage", choices=["throughput", "tune", "depth", "gate", "diag", "openings", "all"])
     p.add_argument("--config", default="configs/baselines.yaml")
+    p.add_argument("--out", default="results/baselines", help="output directory (e.g. results/baselines_8x8)")
     a = p.parse_args()
+    OUT = Path(a.out)
     cfg = load_config(a.config)
     stages = {"throughput": throughput, "tune": tune, "depth": depth_sweep, "gate": gate, "diag": diag, "openings": openings}
     for name, fn in stages.items():

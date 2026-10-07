@@ -15,6 +15,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+# Weight decay drives many weights towards zero; once they become denormal floats (~1e-38),
+# CPU matmuls/convolutions slow down ~10x (seen on the 8x8 AlphaZero run). Flush them to zero.
+torch.set_flush_denormal(True)
+
 from othello.rl.common import Learner
 
 PLANES = ("mine", "theirs", "legal")

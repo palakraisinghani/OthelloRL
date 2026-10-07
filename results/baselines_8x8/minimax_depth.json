@@ -1,0 +1,58 @@
+[
+  {
+    "depth": 1,
+    "games": 300,
+    "wins": 169,
+    "draws": 10,
+    "losses": 121,
+    "win_rate": 0.5633333333333334,
+    "score": 0.58,
+    "score_ci95": 0.05585140284719803,
+    "mean_margin": 5.633333333333334,
+    "seconds": 1.0767722129821777,
+    "nodes_per_move": 8.150735294117647,
+    "sec_per_game_both_sides": 0.013750839233398437
+  },
+  {
+    "depth": 2,
+    "games": 300,
+    "wins": 268,
+    "draws": 1,
+    "losses": 31,
+    "win_rate": 0.8933333333333333,
+    "score": 0.895,
+    "score_ci95": 0.034689785240038594,
+    "mean_margin": 27.29,
+    "seconds": 2.6756343841552734,
+    "nodes_per_move": 39.53429602888087,
+    "sec_per_game_both_sides": 0.03806765079498291
+  },
+  {
+    "depth": 3,
+    "games": 300,
+    "wins": 276,
+    "draws": 2,
+    "losses": 22,
+    "win_rate": 0.92,
+    "score": 0.9233333333333333,
+    "score_ci95": 0.030107728551295905,
+    "mean_margin": 35.35333333333333,
+    "seconds": 14.941649436950684,
+    "nodes_per_move": 262.85036496350364,
+    "sec_per_game_both_sides": 0.21125783920288085
+  },
+  {
+    "depth": 4,
+    "games": 300,
+    "wins": 298,
+    "draws": 0,
+    "losses": 2,
+    "win_rate": 0.9933333333333333,
+    "score": 0.9933333333333333,
+    "score_ci95": 0.009208678676279431,
+    "mean_margin": 41.32666666666667,
+    "seconds": 42.497397661209106,
+    "nodes_per_move": 692.5935251798561,
+    "sec_per_game_both_sides": 0.5106850862503052
+  }
+]

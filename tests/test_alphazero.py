@@ -116,3 +116,26 @@ def test_selfplay_examples_are_well_formed():
     for planes, pi, z in ex:
         assert planes.shape == (3, 6, 6) and abs(pi.sum() - 1) < 1e-5 and z in (-1, 0, 1)
         assert (pi[:36][planes[2].reshape(-1) == 0] == 0).all()   # mass only on legal moves
+
+
+def test_azagent_temperature_and_noise_knobs():
+    from othello.rl.alphazero.selfplay import AZAgent
+    env = OthelloEnv(6)
+    s = env.initial_state()
+    for _ in range(4):
+        s = env.step(s, env.legal_moves(s)[0])
+    greedy = AZAgent(env, CornerMobilityNet(6), sims=32, seed=0)
+    for _ in range(5):                                              # T = 0: always a most-visited move
+        root = greedy.mcts.search([Node(s)], 32, add_noise=False)[0]
+        m = greedy.mcts.choose(root, 0)
+        assert root.N[root.moves.index(m)] == max(root.N)
+    hot = AZAgent(env, CornerMobilityNet(6), sims=32, seed=0, temperature=1.0, noise=0.3)
+    picks = {hot.act(s) for _ in range(30)}
+    assert picks <= set(env.legal_moves(s)) and len(picks) > 1     # T = 1 + noise: varied, always legal
+
+
+def test_denormals_are_flushed():
+    """Regression: denormal weights slowed 8x8 self-play ~10x; importing the nets must enable flushing."""
+    import othello.rl.alphazero.net  # noqa: F401  (import sets the flag)
+    x = torch.tensor([1e-40], dtype=torch.float32)
+    assert (x * 1.0).item() == 0.0

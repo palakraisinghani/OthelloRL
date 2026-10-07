@@ -40,8 +40,11 @@ def main():
     p.add_argument("--workers", type=int)
     p.add_argument("--out")
     a = p.parse_args()
-    weights = load_json(ROOT / "results/baselines/heuristic_tuning.json")["best"]
-    cfg = resolve(copy.deepcopy(load_config(a.config)), weights)
+    raw = load_config(a.config)
+    # bot weights tuned for this board size (8x8 has its own tuning; 6x6 is the default)
+    tuning = ROOT / ("results/baselines_8x8" if raw.get("board_size") == 8 else "results/baselines") / "heuristic_tuning.json"
+    weights = load_json(tuning)["best"]
+    cfg = resolve(copy.deepcopy(raw), weights)
     if a.games:
         cfg["train_games"] = a.games
         cfg["eval_every"] = max(cfg["games_per_iter"], a.games // 4)

@@ -1,0 +1,10 @@
+# Othello-Player difficulty ladder (8x8), one AlphaZero model for every level.
+# temperature: move sampled with probability proportional to N^(1/T) over root visit counts (T = 0: most visited)
+# noise: weight of Dirichlet noise mixed into the root priors
+# Starting values = app SPEC section 3.3; tuned in PLAN Step 5.7 until each level beats the one below >= 70%
+# and every level moves within 2 s.
+levels:
+  - {level: 1, name: Easy,   sims: 10,  temperature: 1.0, noise: 0.3}
+  - {level: 2, name: Medium, sims: 50,  temperature: 0.5, noise: 0.0}
+  - {level: 3, name: Hard,   sims: 200, temperature: 0.1, noise: 0.0}
+  - {level: 4, name: Master, sims: 800, temperature: 0.0, noise: 0.0}

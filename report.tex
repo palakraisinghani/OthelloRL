@@ -1545,8 +1545,8 @@ copies of the same recipe.
 \paragraph{Implication.} For co-evolution to beat self-play, the population
 needs members that are genuinely \emph{different}: heterogeneous algorithms,
 different objectives, or dedicated exploiters whose job is to find and punish
-weaknesses, as in AlphaStar's league. The last of these is exactly what the
-next phase studies: exploiter agents and the blind spots they reveal.
+weaknesses, as in AlphaStar's league. With identical learners, a population
+offers nothing that self-play does not already provide.
 
 %======================================================================
 \section{System Architecture}
@@ -1688,15 +1688,11 @@ the experiments.
         \S\ref{sec:league} with PFSP, so that DQN mostly meets opponents near
         its own strength. This tests whether variety helps once the training
         signal is matched.
-  \item \textbf{Exploiters and blind spots.} Train exploiter agents whose only
-        goal is to beat a fixed model such as Oroletto. Then audit every agent's
-        moves with an exact endgame solver to find and categorise its blind
-        spots, and measure how far each model's weaknesses transfer to the
-        others, including the co-evolved population models.
   \item \textbf{Scaling to \bx{8}.} Re-tune the rule-based bots for \bx{8}
         (Table~\ref{tab:gate} shows the \bx{6} weights are weaker there) and
         train the selected configuration. Optionally, play matches against the
-        Edax engine.
+        Edax engine. The 8×8 model is then packaged for the Othello-Player app, whose
+        four difficulty levels are calibrated with it.
   \item \textbf{One network for every board size.} Test zero-shot transfer,
         then train a fully convolutional, globally pooled network on mixed
         board sizes and compare it with a small-to-large curriculum. The result

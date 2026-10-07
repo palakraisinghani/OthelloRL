@@ -1,0 +1,1354 @@
+{
+  "best": {
+    "disc": 1,
+    "mobility": 5,
+    "corner": 50,
+    "xsquare": -25
+  },
+  "rows": [
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.94625,
+        "hand-default": 0.7225,
+        "random": 0.95375
+      },
+      "mean_score": 0.8741666666666666
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.91625,
+        "hand-default": 0.6875,
+        "random": 0.96125
+      },
+      "mean_score": 0.855
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.89875,
+        "hand-default": 0.69875,
+        "random": 0.96
+      },
+      "mean_score": 0.8525
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.9275,
+        "hand-default": 0.6725,
+        "random": 0.9425
+      },
+      "mean_score": 0.8475
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.9125,
+        "hand-default": 0.69125,
+        "random": 0.92625
+      },
+      "mean_score": 0.8433333333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.93875,
+        "hand-default": 0.64625,
+        "random": 0.9425
+      },
+      "mean_score": 0.8424999999999999
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.8675,
+        "hand-default": 0.70375,
+        "random": 0.93875
+      },
+      "mean_score": 0.8366666666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.89,
+        "hand-default": 0.6825,
+        "random": 0.93375
+      },
+      "mean_score": 0.8354166666666667
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.91625,
+        "hand-default": 0.66875,
+        "random": 0.91
+      },
+      "mean_score": 0.8316666666666667
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.9125,
+        "hand-default": 0.655,
+        "random": 0.9175
+      },
+      "mean_score": 0.8283333333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.915,
+        "hand-default": 0.6175,
+        "random": 0.9475
+      },
+      "mean_score": 0.8266666666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.89125,
+        "hand-default": 0.64,
+        "random": 0.9475
+      },
+      "mean_score": 0.8262499999999999
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.88625,
+        "hand-default": 0.61125,
+        "random": 0.9325
+      },
+      "mean_score": 0.8099999999999999
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.8875,
+        "hand-default": 0.60125,
+        "random": 0.9125
+      },
+      "mean_score": 0.8004166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.86375,
+        "hand-default": 0.60125,
+        "random": 0.9325
+      },
+      "mean_score": 0.7991666666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.895,
+        "hand-default": 0.5875,
+        "random": 0.895
+      },
+      "mean_score": 0.7925
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.8325,
+        "hand-default": 0.6425,
+        "random": 0.88375
+      },
+      "mean_score": 0.78625
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.8325,
+        "hand-default": 0.655,
+        "random": 0.8575
+      },
+      "mean_score": 0.7816666666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.865,
+        "hand-default": 0.585,
+        "random": 0.895
+      },
+      "mean_score": 0.7816666666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.87375,
+        "hand-default": 0.57,
+        "random": 0.8975
+      },
+      "mean_score": 0.7804166666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.85125,
+        "hand-default": 0.61625,
+        "random": 0.86625
+      },
+      "mean_score": 0.7779166666666666
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.825,
+        "hand-default": 0.64375,
+        "random": 0.86
+      },
+      "mean_score": 0.77625
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.825,
+        "hand-default": 0.64375,
+        "random": 0.86
+      },
+      "mean_score": 0.77625
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.845,
+        "hand-default": 0.58875,
+        "random": 0.89375
+      },
+      "mean_score": 0.7758333333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.86125,
+        "hand-default": 0.57,
+        "random": 0.89125
+      },
+      "mean_score": 0.7741666666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.86875,
+        "hand-default": 0.6,
+        "random": 0.85
+      },
+      "mean_score": 0.7729166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.85375,
+        "hand-default": 0.5775,
+        "random": 0.88375
+      },
+      "mean_score": 0.7716666666666666
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.84,
+        "hand-default": 0.58,
+        "random": 0.89375
+      },
+      "mean_score": 0.7712499999999999
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.83125,
+        "hand-default": 0.59375,
+        "random": 0.87375
+      },
+      "mean_score": 0.76625
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.82,
+        "hand-default": 0.58375,
+        "random": 0.87875
+      },
+      "mean_score": 0.7608333333333333
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.82375,
+        "hand-default": 0.58625,
+        "random": 0.85625
+      },
+      "mean_score": 0.7554166666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.81875,
+        "hand-default": 0.50625,
+        "random": 0.925
+      },
+      "mean_score": 0.75
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.80375,
+        "hand-default": 0.5775,
+        "random": 0.86125
+      },
+      "mean_score": 0.7474999999999999
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 50,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.80375,
+        "hand-default": 0.5775,
+        "random": 0.86125
+      },
+      "mean_score": 0.7474999999999999
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 50,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.80375,
+        "hand-default": 0.5775,
+        "random": 0.86125
+      },
+      "mean_score": 0.7474999999999999
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.7925,
+        "hand-default": 0.5975,
+        "random": 0.84625
+      },
+      "mean_score": 0.7454166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 25,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.8075,
+        "hand-default": 0.535,
+        "random": 0.88625
+      },
+      "mean_score": 0.7429166666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.81,
+        "hand-default": 0.5025,
+        "random": 0.91375
+      },
+      "mean_score": 0.7420833333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.82,
+        "hand-default": 0.50625,
+        "random": 0.89625
+      },
+      "mean_score": 0.7408333333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.82875,
+        "hand-default": 0.52125,
+        "random": 0.8675
+      },
+      "mean_score": 0.7391666666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.8375,
+        "hand-default": 0.48125,
+        "random": 0.89625
+      },
+      "mean_score": 0.7383333333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.8375,
+        "hand-default": 0.48125,
+        "random": 0.89625
+      },
+      "mean_score": 0.7383333333333333
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.83125,
+        "hand-default": 0.47125,
+        "random": 0.89375
+      },
+      "mean_score": 0.7320833333333333
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.83125,
+        "hand-default": 0.47125,
+        "random": 0.89375
+      },
+      "mean_score": 0.7320833333333333
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.82375,
+        "hand-default": 0.47125,
+        "random": 0.89375
+      },
+      "mean_score": 0.7295833333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.8275,
+        "hand-default": 0.46125,
+        "random": 0.8625
+      },
+      "mean_score": 0.7170833333333334
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.7825,
+        "hand-default": 0.465,
+        "random": 0.875
+      },
+      "mean_score": 0.7075
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.7825,
+        "hand-default": 0.465,
+        "random": 0.875
+      },
+      "mean_score": 0.7075
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.7825,
+        "hand-default": 0.465,
+        "random": 0.875
+      },
+      "mean_score": 0.7075
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.7675,
+        "hand-default": 0.46625,
+        "random": 0.86625
+      },
+      "mean_score": 0.7000000000000001
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.71625,
+        "hand-default": 0.565,
+        "random": 0.80375
+      },
+      "mean_score": 0.695
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 25,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.71625,
+        "hand-default": 0.565,
+        "random": 0.80375
+      },
+      "mean_score": 0.695
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.8025,
+        "hand-default": 0.46375,
+        "random": 0.81625
+      },
+      "mean_score": 0.6941666666666667
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 10,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.74625,
+        "hand-default": 0.51125,
+        "random": 0.80875
+      },
+      "mean_score": 0.6887500000000001
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.77,
+        "hand-default": 0.45125,
+        "random": 0.84375
+      },
+      "mean_score": 0.6883333333333334
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.75375,
+        "hand-default": 0.45625,
+        "random": 0.8325
+      },
+      "mean_score": 0.6808333333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.755,
+        "hand-default": 0.42,
+        "random": 0.86125
+      },
+      "mean_score": 0.67875
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.72125,
+        "hand-default": 0.4975,
+        "random": 0.78
+      },
+      "mean_score": 0.66625
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.7425,
+        "hand-default": 0.495,
+        "random": 0.7575
+      },
+      "mean_score": 0.665
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.71375,
+        "hand-default": 0.4025,
+        "random": 0.84
+      },
+      "mean_score": 0.6520833333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.77125,
+        "hand-default": 0.3175,
+        "random": 0.84125
+      },
+      "mean_score": 0.6433333333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.77125,
+        "hand-default": 0.3175,
+        "random": 0.84125
+      },
+      "mean_score": 0.6433333333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.6975,
+        "hand-default": 0.4575,
+        "random": 0.725
+      },
+      "mean_score": 0.6266666666666666
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.65875,
+        "hand-default": 0.45,
+        "random": 0.7575
+      },
+      "mean_score": 0.6220833333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.6875,
+        "hand-default": 0.395,
+        "random": 0.775
+      },
+      "mean_score": 0.6191666666666666
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.665,
+        "hand-default": 0.43125,
+        "random": 0.7575
+      },
+      "mean_score": 0.6179166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.73375,
+        "hand-default": 0.3125,
+        "random": 0.79
+      },
+      "mean_score": 0.6120833333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.675,
+        "hand-default": 0.455,
+        "random": 0.705
+      },
+      "mean_score": 0.6116666666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.6825,
+        "hand-default": 0.425,
+        "random": 0.71875
+      },
+      "mean_score": 0.60875
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.65625,
+        "hand-default": 0.4725,
+        "random": 0.6925
+      },
+      "mean_score": 0.6070833333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.6725,
+        "hand-default": 0.33,
+        "random": 0.79125
+      },
+      "mean_score": 0.5979166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 10,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.65625,
+        "hand-default": 0.3275,
+        "random": 0.78125
+      },
+      "mean_score": 0.5883333333333334
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.66125,
+        "hand-default": 0.4,
+        "random": 0.68
+      },
+      "mean_score": 0.5804166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.665,
+        "hand-default": 0.38625,
+        "random": 0.68875
+      },
+      "mean_score": 0.58
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.605,
+        "hand-default": 0.44,
+        "random": 0.69125
+      },
+      "mean_score": 0.57875
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.6325,
+        "hand-default": 0.4025,
+        "random": 0.69125
+      },
+      "mean_score": 0.5754166666666667
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.64125,
+        "hand-default": 0.36375,
+        "random": 0.71625
+      },
+      "mean_score": 0.57375
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 10,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.68875,
+        "hand-default": 0.24875,
+        "random": 0.77375
+      },
+      "mean_score": 0.5704166666666667
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 25,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.68875,
+        "hand-default": 0.24875,
+        "random": 0.77375
+      },
+      "mean_score": 0.5704166666666667
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 50,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.68875,
+        "hand-default": 0.24875,
+        "random": 0.77375
+      },
+      "mean_score": 0.5704166666666667
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.62625,
+        "hand-default": 0.31125,
+        "random": 0.76125
+      },
+      "mean_score": 0.56625
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.62625,
+        "hand-default": 0.31125,
+        "random": 0.76125
+      },
+      "mean_score": 0.56625
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 10,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.62625,
+        "hand-default": 0.31125,
+        "random": 0.76125
+      },
+      "mean_score": 0.56625
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.61125,
+        "hand-default": 0.35125,
+        "random": 0.725
+      },
+      "mean_score": 0.5625
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.59125,
+        "hand-default": 0.4025,
+        "random": 0.67875
+      },
+      "mean_score": 0.5575
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.625,
+        "hand-default": 0.2575,
+        "random": 0.7525
+      },
+      "mean_score": 0.545
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.5275,
+        "hand-default": 0.43,
+        "random": 0.66125
+      },
+      "mean_score": 0.5395833333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 2,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.56125,
+        "hand-default": 0.3675,
+        "random": 0.63
+      },
+      "mean_score": 0.5195833333333334
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 10,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.58375,
+        "hand-default": 0.37,
+        "random": 0.6025
+      },
+      "mean_score": 0.5187499999999999
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.5325,
+        "hand-default": 0.365,
+        "random": 0.57125
+      },
+      "mean_score": 0.4895833333333333
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 2,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.5075,
+        "hand-default": 0.3275,
+        "random": 0.6225
+      },
+      "mean_score": 0.48583333333333334
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 5,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.5075,
+        "hand-default": 0.3275,
+        "random": 0.6225
+      },
+      "mean_score": 0.48583333333333334
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 0,
+        "xsquare": -10
+      },
+      "scores": {
+        "disc-greedy": 0.41375,
+        "hand-default": 0.31625,
+        "random": 0.5475
+      },
+      "mean_score": 0.4258333333333333
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 0,
+        "xsquare": -25
+      },
+      "scores": {
+        "disc-greedy": 0.41375,
+        "hand-default": 0.31625,
+        "random": 0.5475
+      },
+      "mean_score": 0.4258333333333333
+    },
+    {
+      "weights": {
+        "disc": 1,
+        "mobility": 0,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.47625,
+        "hand-default": 0.1625,
+        "random": 0.61
+      },
+      "mean_score": 0.41625
+    },
+    {
+      "weights": {
+        "disc": 0,
+        "mobility": 0,
+        "corner": 0,
+        "xsquare": 0
+      },
+      "scores": {
+        "disc-greedy": 0.37875,
+        "hand-default": 0.1075,
+        "random": 0.5325
+      },
+      "mean_score": 0.33958333333333335
+    }
+  ]
+}

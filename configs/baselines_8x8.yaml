@@ -1,0 +1,27 @@
+# Phase 5, Step 5.1: re-baseline the rule-based bots on 8x8 (same protocol as 6x6).
+seed: 0
+workers: 8
+opening_plies: 6
+
+heuristic_tuning:
+  board_size: 8
+  openings: 200           # 400 games per candidate per opponent
+  grid:
+    disc: [0, 1]
+    mobility: [0, 2, 5, 10]
+    corner: [0, 10, 25, 50]
+    xsquare: [0, -10, -25]
+  opponents:
+    - {name: disc-greedy, type: heuristic, kwargs: {weights: {disc: 1, mobility: 0, corner: 0, xsquare: 0}}}
+    - {name: hand-default, type: heuristic, kwargs: {weights: {disc: 1, mobility: 5, corner: 25, xsquare: 0}}}
+    - {name: random, type: random}
+
+minimax_depth_sweep:
+  board_size: 8
+  depths: [1, 2, 3, 4]
+  openings: 150
+
+gate:
+  sizes: {8: 300}          # openings (games = 2x)
+  heuristic_epsilon: 0.05
+  minimax_depth: 4

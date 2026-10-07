@@ -24,6 +24,20 @@ def make_agent(spec: dict, env, seed=None):
         return HeuristicAgent(env, seed=seed, **kw)
     if kind == "minimax":
         return MinimaxAgent(env, seed=seed, **kw)
+    if kind == "alphazero":                 # {"path": run dir, "sims", "temperature", "noise"}
+        import json
+        from pathlib import Path
+        import torch
+        from othello.rl.alphazero.selfplay import AZAgent, build_net
+        torch.set_num_threads(1)
+        d = Path(kw.pop("path"))
+        cfg = json.loads((d / "config.json").read_text())
+        net = build_net(env.n, cfg)
+        net.load_state_dict(torch.load(d / kw.pop("model", "model.pt"), map_location="cpu"))
+        return AZAgent(env, net, seed=seed, c_puct=cfg["c_puct"], dirichlet_alpha=cfg["dirichlet_alpha"], **kw)
+    if kind == "edax":
+        from othello.agents.edax import EdaxAgent
+        return EdaxAgent(env, seed=seed, **kw)
     raise ValueError(f"unknown agent type {kind!r}")
 
 
@@ -35,4 +49,8 @@ def spec_name(spec: dict) -> str:
     kw = spec.get("kwargs", {})
     if spec["type"] == "minimax":
         return f"minimax-d{kw.get('depth', 4)}"
+    if spec["type"] == "alphazero":
+        return f"alphazero-s{kw.get('sims', 200)}-T{kw.get('temperature', 0)}-e{kw.get('noise', 0)}"
+    if spec["type"] == "edax":
+        return f"edax-l{kw.get('level', 5)}"
     return spec["type"]

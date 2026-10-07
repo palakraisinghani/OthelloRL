@@ -1,0 +1,43 @@
+# Phase 5 — AlphaZero on 8x8 (design decided 2026-10-07): 6 blocks x 64 channels,
+# 150 MCTS simulations per self-play move, 3 seeds x 100k games. Otherwise as 6x6,
+# adapted only where the larger board requires it.
+out: results/alphazero_8x8
+board_size: 8
+seeds: [0, 1, 2]
+train_games: 100000
+eval_every: 5000
+checkpoint_every: 10000
+eval_openings: 100
+final_eval_openings: 250
+opening_plies: 6
+eval_seed: 4242
+start_pos_frac: 0.25
+
+# network
+channels: 64
+blocks: 6
+# search
+sims: 150                   # per self-play move (6x6: 64)
+eval_sims: 150
+c_puct: 1.5
+dirichlet_alpha: 0.5
+noise_frac: 0.25
+temp_plies: 20              # 8x8 games are ~2x longer than 6x6 (6x6: 10)
+# self-play / training (8x8 games give ~2x the positions per game)
+games_per_iter: 256
+workers: 7
+concurrent_games: 40
+buffer_positions: 300000    # 6x6: 150k
+min_buffer: 10000
+batch: 256
+train_steps: 200            # keeps ~4 samples per new position, as on 6x6
+lr: 0.001
+weight_decay: 0.0001
+train_threads: 4
+
+# learning-curve opponent: minimax-d4 (heuristic saturates on 8x8 for strong agents)
+opponent: {type: minimax, kwargs: {depth: 4, weights: TUNED}}
+final_opponents:
+  random: {type: random}
+  heuristic: {type: heuristic, kwargs: {epsilon: 0.05, weights: TUNED}}
+  minimax-d4: {type: minimax, kwargs: {depth: 4, weights: TUNED}}
