@@ -541,7 +541,7 @@ LG_P = {"p0": 0.0, "p25": 0.25, "p50": 0.5, "p75": 0.75, "p100": 1.0}
 # ordinal ramp for the ordered mix parameter p (blue steps 250..650)
 P_RAMP = {"p0": "#86b6ef", "p25": "#5598e7", "p50": "#2a78d6", "p75": "#1c5cab", "p100": "#104281"}
 HELD = [("p0", "self-play DQN (p=0)"), ("minimax-d2", "minimax-d2"), ("minimax-d3", "minimax-d3"),
-        ("ppo", "Phase 2 PPO"), ("dqn+", "Phase 2 DQN+")]
+        ("ppo", "self-play PPO"), ("dqn+", "self-play DQN+")]
 INLG = [("random", "random"), ("heuristic", "heuristic"), ("minimax-d4", "minimax-d4")]
 # colour follows the opponent across the whole report: random/heuristic/minimax-d4 keep
 # slots 1-3 (as in every earlier chart); held-out opponents take slots 4-8
@@ -598,7 +598,7 @@ def league():
         nm = m["name"]
         if "path" in m:
             f = json.loads((ROOT / m["path"] / "final.json").read_text())
-            sc, kind = f["heuristic"]["score"], "traditional RL (Phase 1)"
+            sc, kind = f["heuristic"]["score"], "traditional RL (Sec. 4)"
         else:
             sc, kind = ref[nm], kinds[nm]
         rows.append(rf"{nm} & {kind} & {'--' if sc is None else pct(sc)} \\")
@@ -675,7 +675,7 @@ def league():
     ax.text(len(HELD) - 1.45, 103, "in-league →", fontsize=7, color=INK2)
     ax.axhline(50, color=INK, lw=0.8, ls=":")
     ax.set_xticks(x)
-    ax.set_xticklabels([lab.replace("Phase 2 ", "P2 ") for _, lab in keys], fontsize=7.5)
+    ax.set_xticklabels([lab.replace("self-play ", "") for _, lab in keys], fontsize=7.5)
     ax.set_ylabel("final score (%)")
     ax.set_ylim(0, 110)
     ax.set_yticks(range(0, 101, 20))
@@ -746,7 +746,7 @@ def league():
             early = [100 * v["minimax-d3"]["score"] for k, v in C.items() if k.startswith(m + "/") and v["games"] == 50000]
             last = [100 * v["minimax-d3"]["score"] for k, v in C.items() if k.startswith(m + "/") and v["games"] == max(x["games"] for x in C.values())]
             h4.append(rf"{LG_P[m]:g} & {100 * np.mean(shares):.0f} & {np.mean(early):.1f} & {np.mean(last):.1f} \\")
-        for ax, t in zip(axes, ("vs minimax-d3 (held-out)", "vs Phase 2 PPO seed 0 (held-out)")):
+        for ax, t in zip(axes, ("vs minimax-d3 (held-out)", "vs self-play PPO, seed 0 (held-out)")):
             ax.set_title(t, fontsize=9, color=INK)
             ax.set_xlabel("training games (thousands)")
             ax.axhline(50, color=INK, lw=0.8, ls=":")
@@ -788,7 +788,7 @@ FO_GROUPS = [("dqn-random", "vs-random", "DQN trained vs random"),
              ("dqn-heuristic", "vs-heuristic", "DQN trained vs heuristic"),
              ("dqn-minimax-d3", "vs-minimax-d3", "DQN trained vs minimax-d3"),
              ("dqn-selfplay", None, "DQN trained by self-play"),
-             ("dqn-classical", "classical", "classical DQN (Phase 1, vs heuristic)")]
+             ("dqn-classical", "classical", "classical DQN (Sec. 4, vs heuristic)")]
 FO_BOTS = [("random", "random"), ("heuristic", "heuristic"), ("minimax-d2", "minimax-d2"),
            ("minimax-d3", "minimax-d3"), ("minimax-d4", "minimax-d4")]
 FO_TRAINER = {"dqn-random": "random", "dqn-heuristic": "heuristic", "dqn-minimax-d3": "minimax-d3",
@@ -804,7 +804,7 @@ def _fo_dir(g, run, seed):
 
 
 def _fo_final(g, run, seed):
-    """final.json of a learner; the Phase 1 classical DQN gets its d2/d3 results from classical_panel.json."""
+    """final.json of a learner; the classical DQN (report Sec. 4) gets its d2/d3 results from classical_panel.json."""
     f = json.loads((_fo_dir(g, run, seed) / "final.json").read_text())
     if run == "classical":
         pn = json.loads((RES / "fixed_opponent" / "classical_panel.json").read_text())
@@ -859,8 +859,8 @@ def fixed_opponent():
         ax.errorbar(xs, means, yerr=[lo, hi], fmt="none", ecolor=INK2, elinewidth=0.8, capsize=1.5)
     ax.axhline(50, color=INK, lw=0.8, ls=":")
     ax.set_xticks(x)
-    ax.set_xticklabels([lab.replace("DQN trained ", "trained\n").replace("classical DQN (Phase 1, vs heuristic)",
-                        "classical DQN\n(Phase 1)") for _, _, lab in FO_GROUPS], fontsize=7.5)
+    ax.set_xticklabels([lab.replace("DQN trained ", "trained\n").replace("classical DQN (Sec. 4, vs heuristic)",
+                        "classical DQN\n(Sec. 4)") for _, _, lab in FO_GROUPS], fontsize=7.5)
     ax.set_ylabel("final score (%)")
     ax.set_ylim(0, 108)
     ax.set_yticks(range(0, 101, 20))
@@ -964,7 +964,7 @@ def fixed_opponent():
         for j in range(n_g):
             if not np.isnan(mat[i, j]):
                 ax.text(j, i, f"{mat[i, j]:.0f}", ha="center", va="center", fontsize=8.5, color=INK)
-    short = ["vs random", "vs heuristic", "vs minimax-d3", "self-play", "classical\n(Ph. 1)"]
+    short = ["vs random", "vs heuristic", "vs minimax-d3", "self-play", "classical\n(Sec. 4)"]
     ax.set_xticks(range(n_g), short, fontsize=7.5, rotation=20)
     ax.set_yticks(range(n_g), short, fontsize=7.5)
     ax.set_xlabel("opponent (trained ...)")
@@ -1071,8 +1071,8 @@ def coevo():
     plt.rcParams.update({"font.size": 9, "axes.edgecolor": INK2, "axes.labelcolor": INK,
                          "xtick.color": INK2, "ytick.color": INK2})
     # ---- bars: average member vs self-play and the held-out opponents, per configuration
-    keys = [("vs self-play", "vs self-play DQN", OPP_COLOR["p0"]), ("ppo", "vs Phase 2 PPO", OPP_COLOR["ppo"]),
-            ("dqn+", "vs Phase 2 DQN+", OPP_COLOR["dqn+"]), ("minimax-d2", "vs minimax-d2", OPP_COLOR["minimax-d2"]),
+    keys = [("vs self-play", "vs self-play DQN", OPP_COLOR["p0"]), ("ppo", "vs self-play PPO", OPP_COLOR["ppo"]),
+            ("dqn+", "vs self-play DQN+", OPP_COLOR["dqn+"]), ("minimax-d2", "vs minimax-d2", OPP_COLOR["minimax-d2"]),
             ("minimax-d3", "vs minimax-d3", OPP_COLOR["minimax-d3"])]
     groups = list(bars)
     fig, ax = plt.subplots(figsize=(6.6, 3.0))

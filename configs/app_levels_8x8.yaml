@@ -1,10 +1,14 @@
-# Othello-Player difficulty ladder (8x8), one AlphaZero model for every level.
-# temperature: move sampled with probability proportional to N^(1/T) over root visit counts (T = 0: most visited)
-# noise: weight of Dirichlet noise mixed into the root priors
-# Starting values = app SPEC section 3.3; tuned in PLAN Step 5.7 until each level beats the one below >= 70%
-# and every level moves within 2 s.
-levels:
-  - {level: 1, name: Easy,   sims: 10,  temperature: 1.0, noise: 0.3}
-  - {level: 2, name: Medium, sims: 50,  temperature: 0.5, noise: 0.0}
-  - {level: 3, name: Hard,   sims: 200, temperature: 0.1, noise: 0.0}
-  - {level: 4, name: Master, sims: 800, temperature: 0.0, noise: 0.0}
+# Othello-Player difficulty ladder (8x8): ONE AlphaZero model (the strongest), weakened
+# per level by the move temperature only (decided 2026-10-12).
+# All levels share the same search budget `sims`; the move is sampled with probability
+# proportional to N^(1/T) over the root visit counts N (T = 0: most-visited move). No root noise.
+# PLAN Step 5.7 calibrates `sims` (largest budget within 2 s per move) and the four
+# temperatures (each level beats the one below >= 70%), starting from these candidates.
+sims: 200
+candidate_temperatures: [0.0, 0.25, 0.5, 1.0, 2.0, 4.0]
+levels:                       # placeholders until calibrated
+  - {level: 1, name: Easy,   temperature: 2.0}
+  - {level: 2, name: Medium, temperature: 1.0}
+  - {level: 3, name: Hard,   temperature: 0.25}
+  - {level: 4, name: Master, temperature: 0.0}
+calibrated: false

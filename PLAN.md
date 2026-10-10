@@ -436,6 +436,7 @@ Columns: final win rate, games to reach the threshold (e.g. 80% vs heuristic), w
 - **Budget:** **3 seeds × 100k self-play games**. Other settings follow 6x6, adapted only where board size requires it (e.g. the number of temperature plies).
 - **External yardstick:** the open-source **Edax** engine, compiled from source, played at 2–3 strength levels, alongside re-tuned 8x8 heuristic and minimax bots.
 - **Packaging:** after evaluation and level calibration, the model is packaged into the Othello-Player app (Step 5.8).
+- **App levels (decided 2026-10-12):** only the **single strongest** 8x8 model is exported. The app's four levels use the same search budget and differ **only in move temperature** (no root noise). The values are calibrated in Step 5.7.
 - **Run order (decided after measuring ~53 h per seed):** train **seed 0** first (~2.2 days). Then evaluate it (including Edax), calibrate the app's levels and package it into the app (Steps 5.4, 5.6–5.8). Seeds 1–2 train afterwards in the background (~4.4 days) to complete the 3-seed study (Steps 5.4–5.5, 5.9).
 
 **Step 5.1 — Re-baseline on 8x8** — ✅ done (the best 8x8 weights equal the 6x6 ones; minimax-d4 beats the heuristic 99%; the heuristic beats random 93%)
@@ -463,35 +464,25 @@ Record which 6x6 conclusions (Phases 2–4) held at 8x8 and which changed.
 - *Done when:* the `.onnx` file, the manifest and the fixtures are ready to copy into the app repo.
 
 **Step 5.7 — Calibrate the app's four difficulty levels (8x8)**
-- **Why:** the app's levels (SPEC §3.3) are the same model with different search settings. Their placeholder values must be tuned so each level is clearly stronger than the one below.
+- **Why:** the app plays every level with **one model, the strongest one**, weakened only by its **move temperature** (decided 2026-10-12). The temperatures must give clearly separated levels.
 - **Methodology:**
-  - Add move-choice settings to `AZAgent` (`othello/rl/alphazero/selfplay.py`):
-    - **temperature T applied to the visit counts:** the move is sampled with probability ∝ N^(1/T), using the existing `MCTS.choose`; T = 0 is greedy;
-    - **root Dirichlet noise** with weight ε.
-  - Start from the SPEC table:
-
-    | Level | Simulations | T | ε |
-    |---|---|---|---|
-    | Easy | ~10 | 1.0 | 0.3 |
-    | Medium | ~50 | 0.5 | 0 |
-    | Hard | ~200 | 0.1 | 0 |
-    | Master | ~800, or as many as fit 2 s per move | 0 | 0 |
-
-  - Play adjacent levels against each other (400 games, standard protocol), and each level against the 8x8 reference bots.
-  - Adjust until each level beats the one below at least 70% of the time.
-  - Check that every level stays within 2 s per move on an ordinary laptop.
-- *Done when:* the final per-level values are written into the app's model manifest, with a calibration table (and a short report note).
+  - **One search budget for all levels:** the largest simulation count whose worst-case move time stays within 2 s per move on this machine (single thread). Start at 200.
+  - **Temperature T on visit counts:** the move is sampled with probability ∝ N^(1/T); T = 0 plays the most-visited move. No root noise.
+  - Play a ladder of candidate temperatures T ∈ {0, 0.25, 0.5, 1, 2, 4} against each other (adjacent pairs, 400 games each), and each candidate against the 8x8 bots.
+  - Pick four temperatures (Easy → Master, with Master T = 0) so that each level beats the one below at least 70% of the time.
+- **Experiment details:** `configs/app_levels_8x8.yaml` (sims plus temperature placeholders), `scripts/eval_8x8.py levels`. Output: `results/eval_8x8/<run>/levels.json`. The chosen values go into the model manifest.
+- *Done when:* the manifest records the shared `sims` and the four calibrated temperatures, with a calibration table.
 
 **Step 5.8 — Package the model and link it into the Othello-Player app**
-- **Why:** the app (`../Othello-Player`, GitHub `O-Rolleto-PlayOthello`) is 8×8 only and plays every level with this model. It should start working as soon as the model exists.
+- **Why:** the app (`../Othello-Player`, GitHub `O-Rolleto-PlayOthello`) is 8×8 only and plays every level with **one model, the strongest**. Only that single `.onnx` is packaged. If a later seed (1–2) beats the packaged model head-to-head (95% CI excluding 50%), it replaces it.
 - **Methodology:**
   - Copy the outputs of Steps 5.6–5.7 into the app repo, using the paths its SPEC expects:
     - `models/oroletto-8x8.onnx`;
-    - `models/oroletto-8x8.json` (manifest: planes, c_puct, the calibrated per-level simulations / temperature / root noise, provenance, SHA-256);
+    - `models/oroletto-8x8.json` (manifest: planes, c_puct, the shared `sims` and the calibrated per-level temperatures, provenance, SHA-256);
     - the parity fixtures under `tests/golden/`.
   - The files are copied, not symlinked, so the app builds on other machines.
   - Commit in the app repo with a short message. Don't push without asking.
-  - Report anything the app's code still needs (ONNX inference, MCTS with temperature and noise), without editing the app's code, which is developed separately.
+  - Report anything the app's code still needs (ONNX inference, MCTS, move temperature from the manifest), without editing the app's code, which is developed separately.
 - *Done when:* the files are committed in the app repo and the app's model-loading check (or a quick Python load of the `.onnx` file) passes.
 
 **Step 5.9 — Report section "Scaling to 8×8"**

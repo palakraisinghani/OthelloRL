@@ -31,12 +31,7 @@ from othello.rl.alphazero.mcts import MCTS, Evaluator, Node  # noqa: E402
 from othello.rl.alphazero.net import FastEncoder  # noqa: E402
 from othello.rl.alphazero.selfplay import build_net  # noqa: E402
 
-PLACEHOLDER_LEVELS = [  # SPEC section 3.3 starting values; replaced by Step 5.7's calibration
-    {"level": 1, "name": "Easy", "sims": 10, "temperature": 1.0, "noise": 0.3},
-    {"level": 2, "name": "Medium", "sims": 50, "temperature": 0.5, "noise": 0.0},
-    {"level": 3, "name": "Hard", "sims": 200, "temperature": 0.1, "noise": 0.0},
-    {"level": 4, "name": "Master", "sims": 800, "temperature": 0.0, "noise": 0.0},
-]
+LEVELS_CFG = ROOT / "configs/app_levels_8x8.yaml"   # one model, shared sims, levels differ by temperature only
 
 
 def sha256(path):
@@ -120,6 +115,8 @@ def main():
          "when choosing among most_visited", "positions": fixtures}, indent=1))
 
     # ---- manifest
+    import yaml
+    levels_cfg = yaml.safe_load(LEVELS_CFG.read_text())
     commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
     final = json.loads((run / "final.json").read_text()) if (run / "final.json").exists() else {}
@@ -133,7 +130,9 @@ def main():
         "search": {"algorithm": "PUCT MCTS (OthelloRL othello/rl/alphazero/mcts.py)", "c_puct": cfg["c_puct"],
                    "dirichlet_alpha": cfg["dirichlet_alpha"], "move_choice": "sample by N^(1/T); T=0 most-visited",
                    "value_sign": "negated each ply (every action, including pass, flips the side to move)"},
-        "levels": PLACEHOLDER_LEVELS, "levels_calibrated": False,
+        "levels": {"sims": levels_cfg["sims"], "weakening": "move temperature only (no root noise)",
+                   "ladder": levels_cfg["levels"]},
+        "levels_calibrated": bool(levels_cfg.get("calibrated", False)),
         "network": {"blocks": cfg["blocks"], "channels": cfg["channels"],
                     "parameters": meta.get("params"), "training_games": meta.get("games")},
         "provenance": {"othellorl_commit": commit, "run": str(run.relative_to(ROOT)),
