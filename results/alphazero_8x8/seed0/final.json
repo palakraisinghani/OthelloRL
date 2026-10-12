@@ -1,0 +1,45 @@
+{
+  "random": {
+    "win_rate": 1.0,
+    "score": 1.0,
+    "draw_rate": 0.0,
+    "margin": 36.34,
+    "games": 500
+  },
+  "policy_only/random": {
+    "win_rate": 0.976,
+    "score": 0.976,
+    "draw_rate": 0.0,
+    "margin": 34.43,
+    "games": 500
+  },
+  "heuristic": {
+    "win_rate": 0.998,
+    "score": 0.999,
+    "draw_rate": 0.002,
+    "margin": 35.396,
+    "games": 500
+  },
+  "policy_only/heuristic": {
+    "win_rate": 0.96,
+    "score": 0.96,
+    "draw_rate": 0.0,
+    "margin": 32.066,
+    "games": 500
+  },
+  "minimax-d4": {
+    "win_rate": 0.96,
+    "score": 0.966,
+    "draw_rate": 0.012,
+    "margin": 21.96,
+    "games": 250
+  },
+  "policy_only/minimax-d4": {
+    "win_rate": 0.632,
+    "score": 0.644,
+    "draw_rate": 0.024,
+    "margin": 5.808,
+    "games": 250
+  },
+  "train_seconds": 188630.53075122833
+}

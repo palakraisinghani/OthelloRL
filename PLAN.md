@@ -445,16 +445,16 @@ Re-tune the heuristic weights and minimax depth for 8x8, then re-run the sanity 
 **Step 5.2 — Budget estimate** — ✅ done (measured ~470 s per 256-game iteration, ~53 h per seed including evaluation)
 Use the throughput numbers to estimate compute before launching.
 
-**Step 5.3 — Train the best configuration on 8x8**
+**Step 5.3 — Train the best configuration on 8x8** — seed 0 ✅ (100k games, 52.4 h; 96.6% vs minimax-d4); seeds 1–2 pending
 Only the config should change (`board_size: 8`); there should be no code changes.
 
-**Step 5.4 — Evaluate**
+**Step 5.4 — Evaluate** — seed 0 ✅ (with 150 simulations: Edax level 1 98%, level 3 77%, level 5 42%, level 8 14%; minimax-d4 97.5%)
 Against the 8x8 heuristic and minimax bots. Optionally, add an Edax subprocess bridge for ground-truth matches.
 
 **Step 5.5 — Notes**
 Record which 6x6 conclusions (Phases 2–4) held at 8x8 and which changed.
 
-**Step 5.6 — Export the 8x8 model for the Othello-Player app**
+**Step 5.6 — Export the 8x8 model for the Othello-Player app** — ✅ seed 0 exported (ONNX matches PyTorch within 2.5e-6)
 - **Why:** the app (separate repo `O-Rolleto-PlayOthello`, SPEC §4.2) is **8×8 only**. All four of its levels are played by this one model. There is **no distillation**.
 - **Methodology:**
   - `scripts/export_onnx.py`: export the 8x8 network to ONNX (input `[batch, 3, 8, 8]`; outputs `policy_logits [batch, 65]` and `value [batch]`).
@@ -463,7 +463,7 @@ Record which 6x6 conclusions (Phases 2–4) held at 8x8 and which changed.
   - Write golden fixtures for the app's parity tests: positions, network outputs, and greedy MCTS moves at fixed simulation counts.
 - *Done when:* the `.onnx` file, the manifest and the fixtures are ready to copy into the app repo.
 
-**Step 5.7 — Calibrate the app's four difficulty levels (8x8)**
+**Step 5.7 — Calibrate the app's four difficulty levels (8x8)** — ✅ verified 2026-10-13: Easy T=8, Medium T=2, Hard T=1, Master T=0 at 200 sims; adjacent levels 76%, 86%, 86% (all CIs above 70%)
 - **Why:** the app plays every level with **one model, the strongest one**, weakened only by its **move temperature** (decided 2026-10-12). The temperatures must give clearly separated levels.
 - **Methodology:**
   - **One search budget for all levels:** the largest simulation count whose worst-case move time stays within 2 s per move on this machine (single thread). Start at 200.
@@ -473,7 +473,7 @@ Record which 6x6 conclusions (Phases 2–4) held at 8x8 and which changed.
 - **Experiment details:** `configs/app_levels_8x8.yaml` (sims plus temperature placeholders), `scripts/eval_8x8.py levels`. Output: `results/eval_8x8/<run>/levels.json`. The chosen values go into the model manifest.
 - *Done when:* the manifest records the shared `sims` and the four calibrated temperatures, with a calibration table.
 
-**Step 5.8 — Package the model and link it into the Othello-Player app**
+**Step 5.8 — Package the model and link it into the Othello-Player app** — ✅ shipped seed 0 (app commit `b04b210`, levels calibrated in app commit `cad64e0`)
 - **Why:** the app (`../Othello-Player`, GitHub `O-Rolleto-PlayOthello`) is 8×8 only and plays every level with **one model, the strongest**. Only that single `.onnx` is packaged. If a later seed (1–2) beats the packaged model head-to-head (95% CI excluding 50%), it replaces it.
 - **Methodology:**
   - Copy the outputs of Steps 5.6–5.7 into the app repo, using the paths its SPEC expects:
@@ -485,7 +485,7 @@ Record which 6x6 conclusions (Phases 2–4) held at 8x8 and which changed.
   - Report anything the app's code still needs (ONNX inference, MCTS, move temperature from the manifest), without editing the app's code, which is developed separately.
 - *Done when:* the files are committed in the app repo and the app's model-loading check (or a quick Python load of the `.onnx` file) passes.
 
-**Step 5.9 — Report section "Scaling to 8×8"**
+**Step 5.9 — Report section "Scaling to 8×8"** — seed-0 version written (§8); add seeds 1–2 and verified levels later.
 - **Why:** documents the 8x8 results, what changed from 6x6, and how the app's levels were calibrated.
 - **Methodology:**
   - Assets generated from results files, as in every other section.
@@ -500,7 +500,9 @@ Cancelled by the user before any work started. The design that was drafted (an e
 
 ---
 
-## Phase 7: Variable Board-Size Generalization (~2.5 weeks)
+## Phase 7: Variable Board-Size Generalization (~2.5 weeks) — ⏸ DEFERRED (2026-10-15, user decision; not run)
+
+> Note for when it is picked up: the current networks have size-specific heads (flatten layers), so Step 7.1 needs the size-agnostic network from 7.2 trained on one size to give a real zero-shot result. Open decisions: sizes, seeds, baseline run, app shipping.
 
 **Step 7.1 — Zero-shot baseline**
 Evaluate the 8x8 network on 6x6 and 10x10 and document the failure. If the network can't even run on those sizes because of a flatten layer, that counts as part of the result.

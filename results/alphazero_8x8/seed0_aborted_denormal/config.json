@@ -1,0 +1,78 @@
+{
+  "run": "alphazero",
+  "seed": 0,
+  "out": "results/alphazero_8x8",
+  "board_size": 8,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "train_games": 100000,
+  "eval_every": 5000,
+  "checkpoint_every": 10000,
+  "eval_openings": 100,
+  "final_eval_openings": 250,
+  "opening_plies": 6,
+  "eval_seed": 4242,
+  "start_pos_frac": 0.25,
+  "channels": 64,
+  "blocks": 6,
+  "sims": 150,
+  "eval_sims": 150,
+  "c_puct": 1.5,
+  "dirichlet_alpha": 0.5,
+  "noise_frac": 0.25,
+  "temp_plies": 20,
+  "games_per_iter": 256,
+  "workers": 7,
+  "concurrent_games": 40,
+  "buffer_positions": 300000,
+  "min_buffer": 10000,
+  "batch": 256,
+  "train_steps": 200,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "train_threads": 4,
+  "opponent": {
+    "type": "minimax",
+    "kwargs": {
+      "depth": 4,
+      "weights": {
+        "disc": 1,
+        "mobility": 5,
+        "corner": 50,
+        "xsquare": -25
+      }
+    }
+  },
+  "final_opponents": {
+    "random": {
+      "type": "random"
+    },
+    "heuristic": {
+      "type": "heuristic",
+      "kwargs": {
+        "epsilon": 0.05,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    },
+    "minimax-d4": {
+      "type": "minimax",
+      "kwargs": {
+        "depth": 4,
+        "weights": {
+          "disc": 1,
+          "mobility": 5,
+          "corner": 50,
+          "xsquare": -25
+        }
+      }
+    }
+  }
+}

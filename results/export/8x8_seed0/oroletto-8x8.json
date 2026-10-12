@@ -1,0 +1,88 @@
+{
+  "model": "oroletto-8x8.onnx",
+  "sha256": "306dab4e7de9412d691dce55452d5879bc601e18cfd87a46bb3c31ab3baac2ee",
+  "board_size": 8,
+  "input": {
+    "name": "planes",
+    "shape": [
+      "batch",
+      3,
+      8,
+      8
+    ],
+    "dtype": "float32",
+    "planes": [
+      "own discs",
+      "opponent discs",
+      "legal moves"
+    ],
+    "perspective": "side to move",
+    "square_index": "row * n + col, a1 = 0 top-left",
+    "pass_index": 64
+  },
+  "outputs": {
+    "policy_logits": [
+      "batch",
+      65
+    ],
+    "value": [
+      "batch"
+    ]
+  },
+  "search": {
+    "algorithm": "PUCT MCTS (OthelloRL othello/rl/alphazero/mcts.py)",
+    "c_puct": 1.5,
+    "dirichlet_alpha": 0.5,
+    "move_choice": "sample by N^(1/T); T=0 most-visited",
+    "value_sign": "negated each ply (every action, including pass, flips the side to move)"
+  },
+  "levels": {
+    "sims": 200,
+    "weakening": "move temperature only (no root noise)",
+    "ladder": [
+      {
+        "level": 1,
+        "name": "Easy",
+        "temperature": 8.0
+      },
+      {
+        "level": 2,
+        "name": "Medium",
+        "temperature": 2.0
+      },
+      {
+        "level": 3,
+        "name": "Hard",
+        "temperature": 1.0
+      },
+      {
+        "level": 4,
+        "name": "Master",
+        "temperature": 0.0
+      }
+    ]
+  },
+  "levels_calibrated": true,
+  "network": {
+    "blocks": 6,
+    "channels": 64,
+    "parameters": 458568,
+    "training_games": 100096
+  },
+  "provenance": {
+    "othellorl_commit": "727a50d",
+    "run": "results/alphazero_8x8/seed0",
+    "final_scores": {
+      "random": 1.0,
+      "policy_only/random": 0.976,
+      "heuristic": 0.999,
+      "policy_only/heuristic": 0.96,
+      "minimax-d4": 0.966,
+      "policy_only/minimax-d4": 0.644
+    }
+  },
+  "onnx_check": {
+    "positions": 200,
+    "max_abs_diff_vs_pytorch": 2.5033950805664062e-06
+  }
+}

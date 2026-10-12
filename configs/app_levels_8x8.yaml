@@ -6,9 +6,9 @@
 # temperatures (each level beats the one below >= 70%), starting from these candidates.
 sims: 200
 candidate_temperatures: [0.0, 0.25, 0.5, 1.0, 2.0, 4.0]
-levels:                       # placeholders until calibrated
-  - {level: 1, name: Easy,   temperature: 2.0}
-  - {level: 2, name: Medium, temperature: 1.0}
-  - {level: 3, name: Hard,   temperature: 0.25}
-  - {level: 4, name: Master, temperature: 0.0}
-calibrated: false
+levels:                       # verified 2026-10-13 (`eval_8x8.py verify`): adjacent levels 76%, 86%, 86%
+  - {level: 1, name: Easy,    temperature: 8.0}
+  - {level: 2, name: Medium,  temperature: 2.0}
+  - {level: 3, name: Hard,    temperature: 1.0}
+  - {level: 4, name: Master,  temperature: 0.0}
+calibrated: true

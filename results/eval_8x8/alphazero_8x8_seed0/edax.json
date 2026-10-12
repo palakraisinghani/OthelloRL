@@ -1,0 +1,82 @@
+{
+  "sims": 150,
+  "results": {
+    "edax-l1": {
+      "games": 200,
+      "wins": 195,
+      "draws": 1,
+      "losses": 4,
+      "win_rate": 0.975,
+      "score": 0.9775,
+      "score_ci95": 0.020553733237541044,
+      "mean_margin": 23.69,
+      "seconds": 405.90048480033875
+    },
+    "edax-l3": {
+      "games": 200,
+      "wins": 150,
+      "draws": 6,
+      "losses": 44,
+      "win_rate": 0.75,
+      "score": 0.765,
+      "score_ci95": 0.05876323850844165,
+      "mean_margin": 4.98,
+      "seconds": 397.9657549858093
+    },
+    "edax-l5": {
+      "games": 200,
+      "wins": 79,
+      "draws": 10,
+      "losses": 111,
+      "win_rate": 0.395,
+      "score": 0.42,
+      "score_ci95": 0.06840371919713138,
+      "mean_margin": -10.485,
+      "seconds": 386.7643253803253
+    },
+    "edax-l8": {
+      "games": 200,
+      "wins": 22,
+      "draws": 10,
+      "losses": 168,
+      "win_rate": 0.11,
+      "score": 0.135,
+      "score_ci95": 0.04736047085914581,
+      "mean_margin": -26.62,
+      "seconds": 395.5828335285187
+    },
+    "random": {
+      "games": 200,
+      "wins": 200,
+      "draws": 0,
+      "losses": 0,
+      "win_rate": 1.0,
+      "score": 1.0,
+      "score_ci95": 1.3859292911256333e-07,
+      "mean_margin": 36.175,
+      "seconds": 428.8056688308716
+    },
+    "heuristic": {
+      "games": 200,
+      "wins": 198,
+      "draws": 0,
+      "losses": 2,
+      "win_rate": 0.99,
+      "score": 0.99,
+      "score_ci95": 0.013789822333880888,
+      "mean_margin": 33.93,
+      "seconds": 412.33211851119995
+    },
+    "minimax-d4": {
+      "games": 200,
+      "wins": 194,
+      "draws": 2,
+      "losses": 4,
+      "win_rate": 0.97,
+      "score": 0.975,
+      "score_ci95": 0.021637814122503235,
+      "mean_margin": 23.36,
+      "seconds": 430.69932293891907
+    }
+  }
+}

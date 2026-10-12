@@ -27,6 +27,7 @@
 \input{report/figures/rules_meta.tex}
 \input{report/tables/solved_meta.tex}
 \input{report/tables/league_meta.tex}
+\input{report/tables/s8_meta.tex}
 \input{report/tables/tests_meta.tex}
 \input{report/tables/classical_meta.tex}
 \makeatletter
@@ -949,32 +950,165 @@ collected the data, which is what makes reusing a batch for several epochs
 safe. PPO uses the same opponent pool as DQN+, and only the learner's own moves
 are used for updates, so the data stay on-policy.
 
-\paragraph{AlphaZero.} Following \cite{silver2018}, a single residual network
-$f_\theta(s) = (\mathbf{p}, v)$ outputs a move distribution $\mathbf{p}$ and a value
-$v\in[-1,1]$. It has 4 residual blocks of 64 channels (about 0.3\,M parameters),
-and its input planes are own discs, opponent discs and legal moves. Moves are
-chosen by \emph{Monte Carlo tree search} (MCTS) guided by the network. Each of
-the 64 simulations per move descends the tree by the PUCT rule
+\paragraph{AlphaZero.} Following \cite{silver2018}, a residual network proposes
+moves and evaluates positions, and a tree search guided by the network chooses
+the move actually played. The network is trained to reproduce what the search
+found. Because AlphaZero is the strongest method in this report and the engine
+of the app, \S\ref{sec:az} explains how it works and why.
+
+\subsection{How AlphaZero works}
+\label{sec:az}
+
+\paragraph{The network.} A single residual network
+$f_\theta(s) = (\mathbf{p}, v)$ reads the board from the side to move (planes:
+own discs, opponent discs, legal moves). It outputs a \emph{prior}
+$\mathbf{p}$, a probability for every legal move, and a \emph{value}
+$v\in[-1,1]$, the expected result for the side to move ($+1$ win, $-1$ loss).
+On \bx{6} it has 4 residual blocks of 64 channels (about 0.3\,M parameters).
+The network is a fast \emph{intuition}: one forward pass, no lookahead.
+
+\paragraph{The search.} Before each move, AlphaZero runs a fixed number of
+\emph{simulations} (64 in \bx{6} self-play) of Monte Carlo tree search (MCTS).
+Every edge $(s,a)$ in the tree stores a visit count $N(s,a)$, the sum $W(s,a)$
+of the values backed up through it and its prior $P(s,a)$. One simulation has
+three steps:
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+  \item \textbf{Select.} From the root, repeatedly follow the move maximising
+  \[
+    a^\ast = \arg\max_a \Big[\, \underbrace{Q(s,a)}_{\text{evidence}} +
+    \underbrace{c_{\text{puct}}\, P(s,a)\, \frac{\sqrt{N(s)}}{1+N(s,a)}}_{\text{exploration bonus}} \Big],
+    \qquad Q(s,a) = \frac{W(s,a)}{N(s,a)},
+  \]
+  until reaching a position not yet in the tree. $N(s)$ is the number of
+  visits to $s$ and $c_{\text{puct}}=1.5$. An unvisited move has $Q=0$.
+  \item \textbf{Expand and evaluate.} The network evaluates the new position
+  once. Its prior initialises the new edges, and its value $v$ is the score of
+  the simulation. No random playout is played, unlike classical MCTS.
+  \item \textbf{Back up.} $v$ is added to $W$ and $N$ is increased by one on
+  every edge of the path, flipping the sign at each ply because the side to move
+  alternates.
+\end{enumerate}
+$Q(s,a)$ is therefore the \emph{average} value of all the simulations that went
+through $a$. The exploration bonus is large for moves the network likes but the
+search has rarely tried, and it shrinks as $1/(1+N)$ once a move has been
+checked. Early on, simulations follow the prior. As evidence accumulates, they
+follow $Q$.
+
+\paragraph{Choosing the move: most visits, not the highest average.} After the
+search, AlphaZero plays the \emph{most-visited} root move, not the one with the
+highest $Q$. The two usually agree, but the visit count is the more robust
+signal. A move's $Q$ is an average of network evaluations, and with few visits
+it is noisy. Taking the largest of several noisy averages favours the move whose
+estimate happens to be too high, typically one with very few visits: the
+maximum of noisy estimates is biased upward. A visit count cannot be inflated
+this way. The search keeps sending simulations to a move only while its average
+\emph{stays} high under repeated checking. A move whose early estimate was lucky
+loses its simulations as soon as more evidence pulls its average down. So a high
+visit count means ``this move held up'', and the most-visited move is a vote
+weighted by both evidence and confidence.
+
+\paragraph{Worked example.} Table~\ref{tab:az_example} shows Oroletto's search
+on a real position (Fig.~\ref{fig:az_example}), run at the self-play budget of
+64 simulations and then repeated with far larger budgets.
+\begin{itemize}[leftmargin=*]
+  \item \emph{A lucky average.} At 64 simulations d6 has the highest $Q$, from a
+        single visit. Picking the highest average would play it. With more
+        search its average falls well below the two main candidates, and it
+        never gets many visits.
+  \item \emph{Prior against evidence.} The network's prior strongly prefers a4.
+        At 64 simulations a4 is still the most visited, although c5 already
+        averages higher. As the budget grows, the evidence for c5 accumulates,
+        and at 3{,}200 simulations c5 has twice as many visits as a4. The search
+        has overruled the network's intuition, but only once the evidence was
+        strong enough.
+  \item \emph{Unvisited moves.} c6, b5 and a5 get no visits at 64
+        simulations. Their prior is small and their $Q$ starts at 0, far below
+        the $+0.65$ to $+0.80$ of the candidates. Larger budgets confirm they are
+        worse.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[c]{0.34\linewidth}\centering
+\input{report/figures/az_example_board.tex}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.63\linewidth}\centering
+\small
+\captionof{table}{One search by Oroletto from the position on the left (Black to
+move), at three budgets. $P$: network prior; $N$: visits; $Q$: mean backed-up
+value for Black. \textbf{Bold}: most-visited move (the one played);
+\underline{underlined}: highest $Q$.}
+\label{tab:az_example}
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+ & & \multicolumn{2}{c}{64 sims} & \multicolumn{2}{c}{800 sims} & \multicolumn{2}{c}{3{,}200 sims} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){7-8}
+Move & $P$ & $N$ & $Q$ & $N$ & $Q$ & $N$ & $Q$ \\
+\midrule
+\tabinput{report/tables/az_example.tex}
+\bottomrule
+\end{tabular}
+\end{minipage}
+\caption{The position searched in Table~\ref{tab:az_example}; dashed circles mark
+Black's legal moves.}
+\label{fig:az_example}
+\end{figure}
+
+\paragraph{Why averages make the search forgiving.} Minimax (\S\ref{sec:bots})
+backs up the \emph{best} child value at every node. If one leaf is misjudged
+too high, that error is selected and passed straight to the root, and the
+maximum over many noisy leaves is biased upward at every level. MCTS backs up
+the \emph{average} over all simulations in a subtree, so independent errors in
+the network's evaluations partly cancel. A position is judged by many network
+calls rather than by its single most optimistic one. As simulations concentrate
+on the best reply at each node, the average moves toward the minimax value, so
+nothing is lost in the limit. With a small budget and an imperfect network, the
+averaging is what keeps the search stable. This is why 64 simulations are enough
+for AlphaZero to outplay a depth-4 minimax search.
+
+\paragraph{Training: imitate the search, predict the outcome.} Every self-play
+position stores two targets:
+\begin{itemize}[leftmargin=*]
+  \item the \textbf{visit distribution}
+        $\boldsymbol{\pi}(a) = N(s,a)/\sum_b N(s,b)$ at the root;
+  \item the \textbf{final result} $z\in\{-1,0,+1\}$ of the game, from the side
+        to move.
+\end{itemize}
+The network is trained on a sliding window of the latest 150{,}000 positions to
+minimise
 \[
-  a^\ast = \arg\max_a \Big[\, Q(s,a) + c_{\text{puct}}\, P(s,a)\,
-  \frac{\sqrt{N(s)}}{1+N(s,a)} \Big],
+  \mathcal{L} = \underbrace{(z - v)^2}_{\text{value}} \;
+  \underbrace{-\;\boldsymbol{\pi}^{\top}\log \mathbf{p}}_{\text{policy}} \;+\; c\,\lVert\theta\rVert^2 ,
 \]
-where $Q$ is the mean value of the simulations through $(s,a)$, $P$ the network's
-prior, $N$ visit counts and $c_{\text{puct}}=1.5$. The leaf is evaluated by the
-network rather than by a random rollout. In self-play, Dirichlet noise is mixed
-into the root priors, and the first 10 plies are sampled in proportion to visit
-counts to diversify the games; after that the most-visited move is played. Each
-position stores its visit distribution $\boldsymbol{\pi}$ and the final result
-$z$. The network is trained on a sliding window of the latest 150{,}000 positions
-to minimise
-\[
-  \mathcal{L} = (z - v)^2 \;-\; \boldsymbol{\pi}^{\top}\log \mathbf{p} \;+\; c\,\lVert\theta\rVert^2 ,
-\]
-and each batch is transformed by a random one of the 8 board symmetries. The key
-idea is that \emph{search acts as a policy-improvement operator}. MCTS with the
-current network plays better than the network alone, and the network is then
-trained to imitate the search. The next search starts from a better prior, and
-so on.
+and each batch is transformed by a random one of the 8 board symmetries.
+\begin{itemize}[leftmargin=*]
+  \item \emph{The policy head learns to predict where the search will put its
+        visits.} In the example, the 64-simulation target $\boldsymbol{\pi}$
+        gives c5 more than twice its prior and a4 less. Training moves $\mathbf{p}$
+        that way, so the next search starts with c5 already favoured. This is
+        why \emph{search acts as a policy-improvement operator}. The search plus
+        the network plays better than the network alone, and the network is then
+        trained to be what the search was. The full visit distribution is a
+        richer target than a single chosen move: it also says how close the
+        alternatives were. It is also why the network alone (playing
+        $\arg\max \mathbf{p}$) is strong in \S\ref{sec:selfplay_results}: it has
+        learned to approximate the most-visited move.
+  \item \emph{The value head learns from real outcomes.} $z$ is the actual
+        result of the game, not a bootstrapped estimate as in the DQN family
+        (\S\ref{sec:classical_methods}). The target is unbiased: the value
+        network is never trained toward its own errors. The price is higher variance:
+        one result labels every position of a game, including positions where
+        the outcome was not yet decided. Training on many games averages this
+        noise out.
+\end{itemize}
+
+\paragraph{Temperature and exploration.} The move is chosen with probability
+proportional to $N(s,a)^{1/T}$. $T=0$ plays the most-visited move, $T=1$ samples
+in proportion to visits. In self-play, the first 10 plies use $T=1$ so that games
+start differently, and the rest use $T=0$. Dirichlet noise is mixed into the
+root prior in self-play only, so the search sometimes examines moves the
+network dismisses. Evaluation games use $T=0$ and no noise. The app weakens the
+same model by raising $T$ (\S\ref{sec:app_levels}).
 
 \subsection{Common setup for training and evaluation}
 \label{sec:selfplay_setup}
@@ -1010,6 +1144,7 @@ so on.
 \end{description}
 
 \subsection{Results}
+\label{sec:selfplay_results}
 
 \begin{figure}[H]
 \centering
@@ -1507,7 +1642,8 @@ the self-play DQN itself (its score against itself is 50 by definition).}
 \includegraphics[width=\linewidth]{report/figures/coevo_ckpt.pdf}
 \caption{Strength against training games \emph{per agent}: average member's
 checkpoints against minimax-d3, for every configuration and for the self-play
-DQN (3 seeds each; 200 games per checkpoint).}
+DQN (3 seeds each; 200 games per checkpoint). The y-axis is zoomed to the
+data, so gaps of one or two points between curves are within noise.}
 \label{fig:coevo_ckpt}
 \end{figure}
 
@@ -1599,6 +1735,280 @@ weaknesses, as in AlphaStar's league. With identical learners, a population
 offers nothing that self-play does not already provide.
 
 %======================================================================
+\section{Scaling to \bx{8}}
+\label{sec:scale8}
+
+\glance{\textbf{Question:} does the self-play recipe that produced Oroletto on
+\bx{6} carry over to the standard \bx{8} board? \textbf{Answer:} yes. With a
+slightly larger network and more search, one 8$\times$8 AlphaZero run
+(\EightGames{} self-play games) beats every rule-based bot almost always, and
+plays at the level of the Edax engine between its search levels 3 and 5. This
+model is now the engine behind every difficulty level of the
+\emph{Othello-Player} app.}
+
+\paragraph{Motivation.} Everything so far was studied on \bx{6}, where games are
+short and training is cheap. \bx{8} is the board people actually play, and the
+one the companion app uses. Moving to it tests whether our conclusions are
+artefacts of the small board. It also gives access to an external yardstick:
+\emph{Edax}, a world-class open-source \bx{8} engine.
+
+\subsection{Re-baselining the rule-based bots}
+The bots' weights had been tuned on \bx{6}, so we repeated the weight search and
+the minimax depth sweep on \bx{8} (same protocol as \S\ref{sec:bots}). The best
+\bx{8} weights (\EightWeights) are \EightSameWeights{} the \bx{6} ones. This
+\emph{refutes} our earlier hypothesis (\S\ref{sec:bots_compare}) that the
+heuristic bot falls further behind minimax on larger boards because of
+mis-tuned weights. The larger gap must come from the longer games, which give
+lookahead more chances to pay off.
+
+\begin{table}[H]
+\centering
+\begin{minipage}[t]{0.52\linewidth}\centering
+\caption{\bx{8} minimax depth sweep against the heuristic bot.}
+\label{tab:s8_depth}
+\small
+\begin{tabular}{@{}rlrr@{}}
+\toprule
+$d$ & Score (\%) & Nodes/move & ms/game \\
+\midrule
+\tabinput{report/tables/s8_depth.tex}
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.45\linewidth}\centering
+\caption{\bx{8} reference ladder (score of the first-named bot).}
+\label{tab:s8_gate}
+\small
+\begin{tabular}{@{}lrl@{}}
+\toprule
+Match-up & Games & Score (\%) \\
+\midrule
+\tabinput{report/tables/s8_gate.tex}
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table}
+
+\noindent The ladder random $<$ heuristic $<$ minimax holds on \bx{8}, but
+minimax-d4 now beats the heuristic bot almost every game
+(Table~\ref{tab:s8_gate}). Our own bots therefore can no longer tell strong
+agents apart at the top. That is why Edax is used as an additional yardstick
+below.
+
+\subsection{Training setup}
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=2pt]
+  \item[Algorithm:] AlphaZero, as in \S\ref{sec:selfplay}: self-play against its
+        live copy, with MCTS targets, eight-fold symmetry augmentation and a
+        replay window.
+  \item[Network:] \EightBlocks{} residual blocks $\times$ \EightChannels{}
+        channels (\EightParams{} parameters), slightly deeper than the \bx{6}
+        Oroletto (4 $\times$ 64) for the larger board.
+  \item[Search:] \EightSims{} simulations per self-play move (64 on \bx{6}),
+        because \bx{8} positions have more legal moves.
+  \item[Adapted for the board size:] sampling by visit count for the first 20
+        plies (10 on \bx{6}), a replay window of 300{,}000 positions, and 200
+        training steps per iteration (keeping about four samples per new
+        position). Everything else is as on \bx{6}.
+  \item[Budget:] \EightGames{} self-play games, taking \EightHours{} hours of
+        wall-clock time on 8 CPU cores. Three seeds are planned. This section
+        reports seed~0; seeds 1--2 are still to be trained.
+  \item[Evaluation:] every 5{,}000 games against minimax-d4. At the end:
+        against random, heuristic and minimax-d4, both with search and as the
+        network alone, and against Edax at four search levels.
+\end{description}
+
+\flag{\textbf{Engineering note: a ten-fold slowdown from denormal numbers.} The
+first training attempt slowed down about seven-fold after roughly 10{,}000
+games. Weight decay had pushed thousands of weights below $10^{-38}$. Numbers
+that small are \emph{denormal} floating-point values, and CPUs process them
+more than ten times more slowly. One forward pass of that checkpoint took
+516\,ms instead of 42\,ms. Flushing denormals to zero, and zeroing any weight
+below $10^{-30}$ after each update, removed the slowdown without changing the
+numerical results. The run was then restarted from scratch.}
+
+\subsection{Results}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{report/figures/s8_curve.pdf}
+\caption{\bx{8} learning curves (seed~0): score against minimax-d4 every
+5{,}000 self-play games, with search and as the network alone (200 games per
+point).}
+\label{fig:s8_curve}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{minipage}[t]{0.44\linewidth}\centering
+\caption{Final scores against the \bx{8} bots (\%).}
+\label{tab:s8_final}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+vs & search & net only & games \\
+\midrule
+\tabinput{report/tables/s8_final.tex}
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.54\linewidth}\centering
+\caption{Against the Edax engine (search \EightEvalSims{} simulations per move;
+Edax opening book off).}
+\label{tab:s8_edax}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Opponent & Score (\%) & Win & Margin & Games \\
+\midrule
+\tabinput{report/tables/s8_edax.tex}
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\linewidth]{report/figures/s8_edax.pdf}
+\caption{Score against Edax at increasing search levels (whiskers: 95\% CI).}
+\label{fig:s8_edax}
+\end{figure}
+
+\paragraph{The recipe transfers.} The \bx{8} learning curves
+(Fig.~\ref{fig:s8_curve}) look like the \bx{6} ones. With search, the agent
+already beats minimax-d4 at the first evaluation (5{,}000 games) and then approaches
+the ceiling of that benchmark. The network alone improves steadily throughout
+training and ends clearly above parity with minimax-d4
+(Table~\ref{tab:s8_final}). The two roles of search identified in
+\S\ref{sec:selfplay} reappear: search at play time adds a large margin on top
+of the network, and training on search targets keeps improving the network
+itself.
+
+\paragraph{Where it stands against a world-class engine.} Against Edax, the
+agent's score falls steadily as Edax searches deeper (Fig.~\ref{fig:s8_edax}).
+It wins clearly at level~3, loses narrowly at level~5 and clearly at level~8.
+Its strength therefore lies between Edax levels 3 and 5, a mid-strength
+setting of an engine that is far stronger at full depth. Our own bots
+(Table~\ref{tab:s8_gate}) could no longer resolve this. We attribute the
+remaining gap to two differences: Edax's evaluation function was fitted to a
+large corpus of expert positions, and its search at higher levels is
+much deeper than 150 network-guided simulations.
+
+\subsection{Difficulty levels for the Othello-Player app}
+\label{sec:app_levels}
+
+The app offers four levels and plays all of them with \emph{one model, the
+strongest}. Every level uses the same search budget, and the levels differ only
+in the \emph{move temperature} $T$. After searching, the move is sampled with
+probability $\propto N^{1/T}$ over the root visit counts $N$: $T=0$ always plays
+the most-visited move, and larger $T$ spreads the choice over the other moves
+the search visited. The aims are:
+\begin{itemize}[leftmargin=*]
+  \item each level beats the one below it at least 70\% of the time;
+  \item together, the levels span a beginner to full strength;
+  \item every move takes at most 2\,s.
+\end{itemize}
+With \EightLevelSims{} simulations a move takes \EightMoveMean\,s on average and
+\EightMoveMax\,s at worst on our machine (single thread), well within the
+budget. Every level costs the same, because they share one search.
+
+\begin{table}[H]
+\centering
+\caption{Temperature ladder (one model, \EightLevelSims{} simulations): each
+candidate $T$ against the next weaker candidate (400 games) and against the
+\bx{8} bots (100 games each). Scores in \%.}
+\label{tab:s8_ladder}
+\small
+\begin{tabular}{@{}rlrrr@{}}
+\toprule
+$T$ & vs next weaker & vs random & vs heuristic & vs minimax-d4 \\
+\midrule
+\tabinput{report/tables/s8_ladder.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{report/figures/s8_ladder.pdf}
+\caption{Strength against the move temperature: the same model and search, weakened
+only by sampling its move with temperature $T$.}
+\label{fig:s8_ladder}
+\end{figure}
+
+\paragraph{How temperature weakens the model.} Small temperatures barely matter.
+$T=0$ and $T=0.25$ are indistinguishable head-to-head, because the search
+usually concentrates its visits on one move, and a mild temperature rarely
+picks another. The real drops in strength start around $T=1$
+(Table~\ref{tab:s8_ladder}, Fig.~\ref{fig:s8_ladder}). Against minimax-d4 the
+fall is gradual up to $T=1$ and steep beyond it. At $T=4$, however, the model
+still beats the heuristic bot most of the time. Even a heavily randomised
+choice among the moves its search considered stays well above a beginner's
+level, so the easiest level needs an even higher temperature.
+
+\paragraph{The chosen ladder.} The ladder sweep suggests where the steps are.
+Temperatures below 0.5 barely differ from each other, and
+the easiest level needs a temperature beyond the sweep. We chose Master $T=0$,
+Hard $T=1$, Medium $T=2$ and Easy $T=8$, and verified the choice directly: each
+level played the level below it, and every level played the three bots
+(Table~\ref{tab:s8_levels}).
+
+\begin{table}[H]
+\centering
+\caption{Verification of the four app levels: each level against the level below
+(400 games) and against the \bx{8} bots (100 games each). Scores in \%.}
+\label{tab:s8_levels}
+\small
+\begin{tabular}{@{}rlrlrrr@{}}
+\toprule
+Level & Name & $T$ & vs level below & vs random & vs heuristic & vs minimax-d4 \\
+\midrule
+\tabinput{report/tables/s8_levels.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Every step clears the 70\% target, including the lower end of its
+95\% CI, so the ladder is accepted and shipped as calibrated. The levels also
+line up with the rule-based bots, which gives players a familiar reference:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Easy} is roughly as strong as the heuristic bot, and almost
+        always loses to minimax-d4.
+  \item \textbf{Medium} clearly beats the heuristic bot but loses more often
+        than not to minimax-d4.
+  \item \textbf{Hard} beats minimax-d4 most of the time.
+  \item \textbf{Master} is the unweakened model.
+\end{itemize}
+The steps are not evenly spaced: Easy to Medium is the smallest gap. Easy still
+beats a random player almost always, because even at $T=8$ it samples only
+among moves its search visited, and the search rarely visits blunders. A true
+beginner level would therefore need a different weakening (for example fewer
+simulations or a random move now and then). We kept temperature as the only
+knob, as decided, and the four levels already span from heuristic-bot strength
+to the full model.
+
+\paragraph{Shipping the model.} The model is exported to ONNX with PyTorch's
+exporter. Its outputs match PyTorch to within $3\times10^{-6}$ on 200 positions.
+Three files go to the app:
+\begin{itemize}[leftmargin=*]
+  \item the model, \texttt{models/oroletto-8x8.onnx} (1.8\,MB);
+  \item a manifest, \texttt{models/oroletto-8x8.json}, with the input and output
+        layout, the search settings, the shared simulation count and the
+        per-level temperatures, provenance (training run and code version) and
+        a checksum;
+  \item parity fixtures, \texttt{tests/golden/parity\_8x8.json}: 50 positions
+        with the network's outputs and the \emph{exact} root visit counts after
+        16, 64 and 200 simulations.
+\end{itemize}
+Search without noise is deterministic, so the app's own implementation of the
+search must reproduce these counts exactly. Only the single strongest model is
+shipped. If a later training seed beats it head-to-head, it replaces it.
+
+\paragraph{Status and limitations.} The results above come from a single
+training seed. Seeds 1--2 will show how reproducible the strength is, and may
+replace the shipped model. Edax was played without its opening book, so its
+strength here comes from search alone.
+
+%======================================================================
 \section{Summary of Findings}
 \label{sec:summary}
 
@@ -1617,7 +2027,7 @@ by whom it plays and how well it can look ahead}.
 
 \begin{table}[H]
 \centering
-\caption{The questions this report asked, and the answers (\bx{6}).}
+\caption{The questions this report asked, and the answers.}
 \label{tab:summary}
 \small
 \begin{tabularx}{\linewidth}{@{}p{0.27\linewidth}X@{}}
@@ -1652,6 +2062,11 @@ Do co-evolving populations beat self-play? (\S\ref{sec:coevo}) &
 No. They are equal at equal experience per agent and weaker at equal total
 compute. They are no more diverse and show no cycles: identical learners make
 interchangeable opponents. \\
+\addlinespace
+Does the recipe scale to \bx{8}? (\S\ref{sec:scale8}) &
+Yes. One AlphaZero run beats every rule-based bot and plays between Edax levels
+3 and 5. It now drives all four difficulty levels of the Othello-Player app,
+which are weakened only by the move temperature. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1796,16 +2211,9 @@ the experiments.
         \S\ref{sec:league} with PFSP, so that DQN mostly meets opponents near
         its own strength. This tests whether variety helps once the training
         signal is matched.
-  \item \textbf{Scaling to \bx{8}.} Re-tune the rule-based bots for \bx{8}
-        (Table~\ref{tab:gate} shows the \bx{6} weights are weaker there) and
-        train the selected configuration. Optionally, play matches against the
-        Edax engine. The strongest 8×8 model is then exported (ONNX) and packaged
-        for the Othello-Player app. All four of the app's difficulty levels are
-        played by this one model with the same search budget, weakened only by
-        the move temperature: the move is sampled with probability
-        $\propto N^{1/T}$ over the root visit counts, with $T=0$ at the
-        strongest level. The temperatures are calibrated so that each level
-        beats the one below at least 70\% of the time.
+  \item \textbf{Finishing the \bx{8} study.} Train seeds 1--2 to measure how
+        reproducible the strength is (\S\ref{sec:scale8}), and replace the
+        app's model if a seed beats it head-to-head.
   \item \textbf{One network for every board size.} Test zero-shot transfer,
         then train a fully convolutional, globally pooled network on mixed
         board sizes and compare it with a small-to-large curriculum. The result

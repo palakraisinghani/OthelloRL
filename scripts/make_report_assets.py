@@ -1121,7 +1121,8 @@ def coevo():
     cp = RES / "coevo" / "ckpt_curves.json"
     if cp.exists():
         C = json.loads(cp.read_text())
-        fig, ax = plt.subplots(figsize=(6.2, 2.8))
+        fig, ax = plt.subplots(figsize=(6.2, 3.6))
+        ys = []
         ramp = {"F1-N2": "#86b6ef", "F1-N4": "#2a78d6", "F1-N8": "#104281", "F2-N4": "#eb6834", "F2-N8": "#a8461d"}
         for cfg, fam, n, _ in CO_CFGS:
             by = {}
@@ -1131,6 +1132,7 @@ def coevo():
                     g25 = int(round(v["games"] / 25_000) * 25_000)
                     by.setdefault(g25, []).append(100 * v["minimax-d3"]["score"])
             g = sorted(by)
+            ys += [np.mean(by[x]) for x in g]
             ax.plot([x / 1000 for x in g], [np.mean(by[x]) for x in g], color=ramp[cfg], lw=2, marker="o", ms=3,
                     ls="-" if fam == "F1" else "--", label=f"{fam} N={n}")
         SC = json.loads((RES / "league" / "dqn_ckpt_curves.json").read_text())
@@ -1139,14 +1141,16 @@ def coevo():
             if k.startswith("p0/"):
                 by.setdefault(v["games"], []).append(100 * v["minimax-d3"]["score"])
         g = sorted(by)
+        ys += [np.mean(by[x]) for x in g]
         ax.plot([x / 1000 for x in g], [np.mean(by[x]) for x in g], color=OPP_COLOR["p0"], lw=2.2, marker="s", ms=3,
                 label="self-play DQN")
         ax.set_xlabel("training games per agent (thousands)")
         ax.set_ylabel("score vs minimax-d3 (%)")
-        ax.set_ylim(0, 40)
+        # zoom the y axis to the data: all curves sit in a narrow band
+        ax.set_ylim(np.floor(min(ys)) - 1, np.ceil(max(ys)) + 1)
         _style_axes(ax)
         ax.grid(True, axis="x", color=GRID, lw=0.6)
-        ax.legend(frameon=False, fontsize=7, ncol=3, loc="lower right")
+        ax.legend(frameon=False, fontsize=7.5, ncol=3, loc="lower center", bbox_to_anchor=(0.5, 1.0))
         fig.tight_layout()
         fig.savefig(FIG / "coevo_ckpt.pdf")
         plt.close(fig)
@@ -1174,6 +1178,136 @@ def coevo():
     write("coevo_cycles.tex", "\n".join(rows) + "\n")
 
 
+# ------------------------------------------------------------------ scaling to 8x8 (Phase 5)
+def scale8():
+    import numpy as np
+    run = RES / "alphazero_8x8" / "seed0"
+    ev = RES / "eval_8x8" / "alphazero_8x8_seed0"
+    if not (run / "final.json").exists() or not (ev / "edax.json").exists():
+        print("scale8: results missing")
+        return
+    tune = json.loads((RES / "baselines_8x8" / "heuristic_tuning.json").read_text())
+    tune6 = load("baselines/heuristic_tuning.json")
+    depth = json.loads((RES / "baselines_8x8" / "minimax_depth.json").read_text())
+    gate8 = json.loads((RES / "baselines_8x8" / "gate.json").read_text())["sizes"]["8"]["matches"]
+    meta = json.loads((run / "meta.json").read_text())
+    cfg = json.loads((run / "config.json").read_text())
+    fin = json.loads((run / "final.json").read_text())
+    edax = json.loads((ev / "edax.json").read_text())
+    lad = json.loads((ev / "ladder.json").read_text()) if (ev / "ladder.json").exists() else None
+
+    # ---- macros
+    W = tune["best"]
+    macros = [rf"\newcommand{{\EightWeights}}{{corner {W['corner']:g}, mobility {W['mobility']:g}, disc {W['disc']:g}, X-square {W['xsquare']:g}}}",
+              rf"\newcommand{{\EightSameWeights}}{{{'identical to' if W == tune6['best'] else 'different from'}}}",
+              rf"\newcommand{{\EightGames}}{{{meta['games']:,}}}".replace(",", "{,}"),
+              rf"\newcommand{{\EightHours}}{{{meta['train_seconds'] / 3600:.1f}}}",
+              rf"\newcommand{{\EightParams}}{{{meta['params']:,}}}".replace(",", "{,}"),
+              rf"\newcommand{{\EightBlocks}}{{{cfg['blocks']}}}", rf"\newcommand{{\EightChannels}}{{{cfg['channels']}}}",
+              rf"\newcommand{{\EightSims}}{{{cfg['sims']}}}", rf"\newcommand{{\EightEvalSims}}{{{edax['sims']}}}"]
+    if lad:
+        macros += [rf"\newcommand{{\EightLevelSims}}{{{lad['sims']}}}",
+                   rf"\newcommand{{\EightMoveMean}}{{{lad['move_time']['mean_s']:.2f}}}",
+                   rf"\newcommand{{\EightMoveMax}}{{{lad['move_time']['max_s']:.2f}}}"]
+    write("s8_meta.tex", "\n".join(macros) + "\n")
+
+    # ---- bots: depth sweep + gate
+    rows = [rf"{r['depth']} & {score_ci(r)} & {r['nodes_per_move']:.0f} & {1000 * r['sec_per_game_both_sides']:.0f} \\" for r in depth]
+    write("s8_depth.tex", "\n".join(rows) + "\n")
+    rows = [rf"{m['a']} vs {m['b']} & {m['games']} & {score_ci(m)} \\" for m in gate8]
+    write("s8_gate.tex", "\n".join(rows) + "\n")
+
+    # ---- final evaluation (with search / network only) + Edax
+    rows = []
+    for b in ("random", "heuristic", "minimax-d4"):
+        rows.append(rf"{b} & {pct(fin[b]['score'])} & {pct(fin['policy_only/' + b]['score'])} & {fin[b]['games']} \\")
+    write("s8_final.tex", "\n".join(rows) + "\n")
+    rows = [rf"Edax level {k.split('-l')[1]} & {score_ci(v)} & {pct(v['win_rate'])} & {v['mean_margin']:+.1f} & {v['games']} \\"
+            for k, v in edax["results"].items() if k.startswith("edax")]
+    write("s8_edax.tex", "\n".join(rows) + "\n")
+
+    FIG.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": INK2, "axes.labelcolor": INK,
+                         "xtick.color": INK2, "ytick.color": INK2})
+    # ---- learning curves vs minimax-d4
+    cv = _curve(run)
+    g = np.array([float(r["games"]) for r in cv]) / 1000
+    fig, ax = plt.subplots(figsize=(6.2, 2.8))
+    ax.plot(g, [100 * float(r["score"]) for r in cv], color=SERIES1, lw=2, marker="o", ms=3,
+            label=f"with search ({cfg['eval_sims']} simulations per move)")
+    ax.plot(g, [100 * float(r["policy_score"]) for r in cv], color=SERIES1, lw=2, ls="--", marker="o", ms=3,
+            label="network alone (no search)")
+    ax.axhline(50, color=INK, lw=0.8, ls=":")
+    ax.set_xlabel("self-play games (thousands)")
+    ax.set_ylabel("score vs minimax-d4 (%)")
+    ax.set_ylim(0, 100)
+    _style_axes(ax)
+    ax.grid(True, axis="x", color=GRID, lw=0.6)
+    ax.legend(frameon=False, fontsize=7.5, loc="lower right")
+    fig.tight_layout()
+    fig.savefig(FIG / "s8_curve.pdf")
+    plt.close(fig)
+
+    # ---- Edax ladder bars
+    lv = [(k, v) for k, v in edax["results"].items() if k.startswith("edax")]
+    fig, ax = plt.subplots(figsize=(4.8, 2.7))
+    x = np.arange(len(lv))
+    vals = [100 * v["score"] for _, v in lv]
+    err = [100 * v["score_ci95"] for _, v in lv]
+    ax.bar(x, vals, 0.55, color=SERIES1, edgecolor="white", linewidth=1)
+    ax.errorbar(x, vals, yerr=err, fmt="none", ecolor=INK2, elinewidth=0.9, capsize=2.5)
+    for xi, v_, e in zip(x, vals, err):
+        ax.text(xi, v_ + e + 2, f"{v_:.0f}", ha="center", fontsize=7.5, color=INK2)
+    ax.axhline(50, color=INK, lw=0.8, ls=":")
+    ax.set_xticks(x, [f"Edax\nlevel {k.split('-l')[1]}" for k, _ in lv], fontsize=8)
+    ax.set_ylabel("score (%)")
+    ax.set_ylim(0, 110)
+    ax.set_yticks(range(0, 101, 20))
+    _style_axes(ax)
+    fig.tight_layout()
+    fig.savefig(FIG / "s8_edax.pdf")
+    plt.close(fig)
+
+    # ---- temperature ladder
+    if lad:
+        ts = sorted(float(k.split("=")[1]) for k in lad["vs_bots"])
+        rows = []
+        adj = {k: v for k, v in lad["adjacent"].items()}
+        for i, t in enumerate(ts):
+            nxt = f"T={t} vs T={ts[i + 1]}" if i + 1 < len(ts) else None
+            a = rf"{score_ci(adj[nxt])} (vs $T={ts[i + 1]:g}$)" if nxt else "--"
+            vb = lad["vs_bots"][f"T={t}"]
+            rows.append(rf"{t:g} & {a} & {pct(vb['random']['score'])} & {pct(vb['heuristic']['score'])} & {pct(vb['minimax-d4']['score'])} \\")
+        write("s8_ladder.tex", "\n".join(rows) + "\n")
+        fig, ax = plt.subplots(figsize=(5.4, 2.8))
+        for b in ("random", "heuristic", "minimax-d4"):
+            ax.plot(ts, [100 * lad["vs_bots"][f"T={t}"][b]["score"] for t in ts], color=OPP_COLOR[b], lw=2,
+                    marker="o", ms=4, label=f"vs {b}")
+        ax.axhline(50, color=INK, lw=0.8, ls=":")
+        ax.set_xscale("symlog", linthresh=0.25)
+        ax.set_xticks(ts, [f"{t:g}" for t in ts])
+        ax.set_xlabel("move temperature T (same model, same search)")
+        ax.set_ylabel("score (%)")
+        ax.set_ylim(0, 105)
+        _style_axes(ax)
+        ax.legend(frameon=False, fontsize=7.5, loc="lower left")
+        fig.tight_layout()
+        fig.savefig(FIG / "s8_ladder.pdf")
+        plt.close(fig)
+    # ---- verified levels (if the verify run has finished)
+    lp = ev / "levels.json"
+    if lp.exists():
+        L = json.loads(lp.read_text())
+        rows = []
+        for l in L["levels"]:
+            below = next((v for k, v in L["adjacent"].items() if k.startswith(l["name"] + " vs")), None)
+            vb = L["vs_bots"][l["name"]]
+            rows.append(rf"{l['level']} & {l['name']} & {l['temperature']:g} & "
+                        rf"{score_ci(below) if below else '--'} & {pct(vb['random']['score'])} & "
+                        rf"{pct(vb['heuristic']['score'])} & {pct(vb['minimax-d4']['score'])} \\")
+        write("s8_levels.tex", "\n".join(rows) + "\n")
+
+
 def yaml_load(path):
     import yaml
     return yaml.safe_load(Path(path).read_text())
@@ -1196,4 +1330,5 @@ if __name__ == "__main__":
     league()
     fixed_opponent()
     coevo()
+    scale8()
     print("wrote", sorted(p.name for p in TAB.iterdir()), sorted(p.name for p in FIG.iterdir()))
