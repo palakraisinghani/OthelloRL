@@ -1,0 +1,1667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teaching a Machine to Play Othello</title>
+<meta name="description" content="From hand-written bots to classic reinforcement learning to AlphaZero: what it takes for a program to learn Othello, a game where grabbing the most discs is usually the wrong move.">
+<meta name="author" content="Palak Raisinghani">
+<meta property="og:title" content="Teaching a Machine to Play Othello">
+<meta property="og:description" content="Rule-based bots, five classic RL methods, self-play and AlphaZero on Othello, and what makes a good practice partner.">
+<meta property="og:type" content="article">
+<script>
+  try { var t = localStorage.getItem('oth-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
+<style>
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 650; font-display: swap; src: url(assets/fonts/Fraunces-650.woff2) format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-style: normal; font-weight: 400 600; font-display: swap; src: url(assets/fonts/SourceSerif4-normal.woff2) format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-style: italic; font-weight: 400; font-display: swap; src: url(assets/fonts/SourceSerif4-italic.woff2) format("woff2"); }
+:root {
+  --bg: #faf7f0;
+  --surface: #ffffff;
+  --surface-2: #f3efe4;
+  --ink: #1e231f;
+  --ink-2: #454d47;
+  --muted: #747c76;
+  --rule: #e4ddcd;
+  --accent: #23794a;
+  --accent-ink: #1b5e39;
+  --felt: #2e7d4f;
+  --felt-dark: #1b4d30;
+  --amber: #b97a12;
+  --amber-bg: #fbf1dc;
+  --amber-line: #e9c987;
+  --primer-bg: #eaf3ec;
+  --primer-line: #b9d8c3;
+  --red: #b3322b;
+  --bar: #2e7d4f;
+  --bar-2: #c6dccd;
+  --shadow: 0 1px 2px rgba(30, 35, 31, .05), 0 10px 30px rgba(30, 35, 31, .07);
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --display: "Fraunces", "Source Serif 4", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --measure: 690px;
+  --wide: 960px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101411; --surface: #181e1a; --surface-2: #1d2420; --ink: #e6ebe7; --ink-2: #bcc5bf; --muted: #8b958e;
+    --rule: #29322c; --accent: #5cc187; --accent-ink: #7fd3a1; --amber: #e2a93f; --amber-bg: #2a2315; --amber-line: #5c4a22;
+    --primer-bg: #142219; --primer-line: #26402f; --red: #e2655d; --bar: #4fb37a; --bar-2: #2a3d31;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101411; --surface: #181e1a; --surface-2: #1d2420; --ink: #e6ebe7; --ink-2: #bcc5bf; --muted: #8b958e;
+  --rule: #29322c; --accent: #5cc187; --accent-ink: #7fd3a1; --amber: #e2a93f; --amber-bg: #2a2315; --amber-line: #5c4a22;
+  --primer-bg: #142219; --primer-line: #26402f; --red: #e2655d; --bar: #4fb37a; --bar-2: #2a3d31;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 1.125rem; line-height: 1.7;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+::selection { background: rgba(46, 125, 79, .22); }
+
+/* ---------- top chrome ---------- */
+.progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 50; }
+.theme-toggle {
+  position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 40;
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface);
+  color: var(--ink-2); cursor: pointer; display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.theme-toggle svg { width: 18px; height: 18px; }
+
+/* ---------- layout ---------- */
+.wrap { padding: 0 20px; }
+.col { max-width: var(--measure); margin: 0 auto; }
+.wide { max-width: var(--wide); margin: 0 auto; }
+section { scroll-margin-top: 24px; }
+p { margin: 0 0 1.1em; }
+h2, h3 { font-family: var(--display); font-weight: 650; line-height: 1.2; letter-spacing: -.01em; color: var(--ink); }
+h2 { font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.15rem); margin: 3.2em 0 .5em; }
+h3 { font-size: 1.3rem; margin: 2em 0 .4em; }
+.kicker { font-family: var(--sans); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); font-weight: 600; margin-bottom: .4em; }
+h2 .num { display: block; font-family: var(--sans); font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: .6em; }
+em { font-style: italic; }
+strong { font-weight: 600; }
+hr.sep { border: 0; height: 1px; background: var(--rule); margin: 3rem auto; max-width: var(--measure); }
+
+/* ---------- hero ---------- */
+.hero { padding: clamp(48px, 9vw, 110px) 20px 40px; border-bottom: 1px solid var(--rule); background:
+  radial-gradient(1200px 400px at 85% -10%, rgba(46, 125, 79, .10), transparent 60%), var(--bg); }
+.hero-inner { max-width: var(--wide); margin: 0 auto; display: grid; grid-template-columns: 1.25fr 1fr; gap: clamp(24px, 5vw, 64px); align-items: center; }
+.hero h1 { font-family: var(--display); font-weight: 650; font-size: clamp(2.3rem, 1.4rem + 3.6vw, 3.9rem); line-height: 1.05; letter-spacing: -.02em; margin: .1em 0 .35em; }
+.dek { font-size: clamp(1.1rem, 1rem + .4vw, 1.3rem); color: var(--ink-2); line-height: 1.55; margin: 0 0 1.4em; }
+.byline { font-family: var(--sans); font-size: .9rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: .35em 1em; }
+.byline strong { color: var(--ink); font-weight: 600; }
+.hero-board { position: relative; }
+.hero-board .board-frame { box-shadow: 0 18px 50px rgba(20, 50, 30, .28); }
+.hero-caption { font-family: var(--sans); font-size: .82rem; color: var(--muted); margin-top: .8em; text-align: center; }
+.hero-caption .live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e0473c; margin-right: .45em; vertical-align: 1px; animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+@media (max-width: 760px) { .hero-inner { grid-template-columns: 1fr; } .hero-board { max-width: 340px; margin: 0 auto; width: 100%; } }
+
+/* ---------- stat tiles ---------- */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 2.2rem auto 0; max-width: var(--wide); }
+.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 16px 14px; }
+.stat .big { font-family: var(--display); font-weight: 650; font-size: 1.65rem; line-height: 1.1; color: var(--ink); }
+.stat .lbl { font-family: var(--sans); font-size: .82rem; color: var(--muted); line-height: 1.35; margin-top: .35em; }
+@media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- boxes ---------- */
+.tldr, .primer, .callout, .aside, .scorebox {
+  border-radius: 14px; padding: 22px 24px; margin: 2rem 0;
+}
+.tldr { background: var(--surface); border: 1px solid var(--rule); box-shadow: var(--shadow); }
+.tldr h3, .primer h3 { margin-top: 0; }
+.primer { background: var(--primer-bg); border: 1px solid var(--primer-line); }
+.primer .tag, .aside .tag, .scorebox .tag { font-family: var(--sans); font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent-ink); }
+.callout { background: var(--amber-bg); border: 1px solid var(--amber-line); border-left: 5px solid var(--amber); font-size: 1.12rem; }
+.callout p:last-child, .primer p:last-child, .aside p:last-child, .scorebox p:last-child { margin-bottom: 0; }
+.aside { background: var(--surface-2); border: 1px solid var(--rule); font-size: 1.02rem; }
+.aside h4, .scorebox h4 { font-family: var(--display); font-size: 1.12rem; margin: .2em 0 .5em; font-weight: 650; }
+.scorebox { background: var(--surface); border: 1px dashed var(--rule); font-size: 1rem; }
+ul.arrows { list-style: none; padding: 0; margin: .4em 0 0; }
+ul.arrows li { position: relative; padding-left: 1.8em; margin: .55em 0; }
+ul.arrows li::before { content: "→"; position: absolute; left: 0; color: var(--accent); font-weight: 700; font-family: var(--sans); }
+ul.plain { padding-left: 1.2em; }
+ul.plain li { margin: .35em 0; }
+
+/* ---------- toc ---------- */
+.toc { font-family: var(--sans); font-size: .95rem; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 18px 0; margin: 2.4rem 0; }
+.toc .tag { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: .6em; }
+.toc ol { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; counter-reset: toc; }
+.toc li { counter-increment: toc; margin: .3em 0; break-inside: avoid; }
+.toc li::before { content: counter(toc, decimal-leading-zero); color: var(--muted); font-variant-numeric: tabular-nums; margin-right: .7em; }
+.toc a { color: var(--ink); text-decoration: none; }
+.toc a:hover { color: var(--accent-ink); text-decoration: underline; }
+@media (max-width: 600px) { .toc ol { columns: 1; } }
+
+/* ---------- timeline ---------- */
+.timeline { display: flex; gap: 12px; overflow-x: auto; padding: 6px 2px 14px; scroll-snap-type: x mandatory; margin: 1rem 0 0; }
+.timeline .ev { flex: 0 0 190px; scroll-snap-align: start; background: var(--surface); border: 1px solid var(--primer-line); border-radius: 12px; padding: 12px 14px; font-family: var(--sans); font-size: .84rem; line-height: 1.4; color: var(--ink-2); }
+.timeline .yr { font-family: var(--display); font-weight: 650; font-size: 1.15rem; color: var(--accent-ink); }
+.timeline .sys { font-weight: 650; color: var(--ink); margin: .1em 0 .3em; }
+.timeline .ev.oth { border-color: var(--amber-line); }
+.timeline .ev.oth .yr { color: var(--amber); }
+.tl-note { font-family: var(--sans); font-size: .8rem; color: var(--muted); }
+
+/* ---------- figures ---------- */
+figure { margin: 2.2rem auto; }
+figure.chart { max-width: var(--wide); }
+figure.chart .card img { width: 100%; }
+figure.chart .card { background: #fff; border-radius: 14px; padding: clamp(10px, 2vw, 22px); border: 1px solid var(--rule); box-shadow: var(--shadow); }
+figure.chart.narrow { max-width: 640px; }
+figure.chart.mid { max-width: 780px; }
+figcaption { font-family: var(--sans); font-size: .86rem; line-height: 1.5; color: var(--muted); margin: .8em auto 0; max-width: var(--measure); }
+figcaption b { color: var(--ink-2); font-weight: 600; }
+.gallery-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.gallery-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .gallery-3 { grid-template-columns: repeat(2, 1fr); } .gallery-2 { grid-template-columns: 1fr; } }
+@media (max-width: 440px) { .gallery-3 { grid-template-columns: 1fr; } }
+.rule-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 12px; }
+.rule-card .cap { font-family: var(--sans); font-size: .84rem; line-height: 1.45; color: var(--ink-2); margin-top: .6em; }
+.rule-card .cap b { color: var(--ink); }
+
+/* ---------- boards ---------- */
+.board-frame { border-radius: 12px; background: linear-gradient(145deg, #6b4a2b, #4a321c); padding: 3.2%; }
+svg.board { display: block; width: 100%; height: auto; }
+svg.board .coord { font-family: var(--sans); font-size: 3.3px; fill: rgba(255, 255, 255, .72); font-weight: 600; }
+svg.board .disc { transform-box: fill-box; transform-origin: center; }
+svg.board .disc.flip { animation: flip .5s ease-in-out; }
+svg.board .disc.pop { animation: pop .28s ease-out; }
+@keyframes flip { 0% { transform: scaleX(1); } 50% { transform: scaleX(.06); } 100% { transform: scaleX(1); } }
+@keyframes pop { 0% { transform: scale(.3); opacity: .2; } 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { svg.board .disc.flip, svg.board .disc.pop { animation: none; } }
+svg.board .hit { fill: transparent; cursor: pointer; }
+svg.board .hit:hover + .hint, svg.board .hint.hover { opacity: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--sans); font-size: .82rem; color: var(--ink-2); margin: 1rem 0 0; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend svg { width: 18px; height: 18px; flex: none; }
+
+/* ---------- widgets ---------- */
+.widget { background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; box-shadow: var(--shadow); padding: clamp(16px, 3vw, 28px); margin: 2.4rem auto; max-width: var(--wide); font-family: var(--sans); font-size: .95rem; line-height: 1.5; }
+.widget .w-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
+.widget .w-title { font-family: var(--display); font-weight: 650; font-size: 1.25rem; color: var(--ink); }
+.widget .w-sub { color: var(--muted); font-size: .86rem; }
+.w-grid { display: grid; grid-template-columns: minmax(220px, 360px) 1fr; gap: clamp(16px, 3vw, 32px); align-items: start; }
+@media (max-width: 720px) { .w-grid { grid-template-columns: 1fr; } .w-grid > .board-col { max-width: 360px; width: 100%; margin: 0 auto; } }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+.seg button { font: inherit; font-size: .86rem; border: 0; background: transparent; color: var(--ink-2); padding: 8px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.btn { font: inherit; font-size: .86rem; border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.controls .lab { color: var(--muted); font-size: .82rem; margin-right: 2px; }
+.status { font-size: 1rem; font-weight: 600; color: var(--ink); min-height: 1.6em; margin: 10px 0 6px; }
+.scoreline { display: flex; gap: 18px; align-items: center; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.scoreline .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: -2px; margin-right: 6px; }
+.dot.b { background: radial-gradient(circle at 35% 30%, #666, #111 60%); }
+.dot.w { background: radial-gradient(circle at 35% 30%, #fff, #cfcfcf 70%); border: 1px solid #999; }
+.note { color: var(--muted); font-size: .84rem; margin-top: 10px; }
+.side p { margin: 0 0 .8em; }
+
+/* mcts rows */
+.mrows { display: grid; gap: 6px; margin: 12px 0 10px; }
+.mrow { display: grid; grid-template-columns: 2.6em 1fr 4.2em 4.2em 3.6em; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 8px; cursor: default; }
+.mrow.head { color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .08em; padding-top: 0; padding-bottom: 0; }
+.mrow:not(.head):hover { background: var(--surface-2); }
+.mrow .mv { font-weight: 700; color: var(--ink); }
+.mrow .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.mrow .track { position: relative; height: 14px; background: var(--surface-2); border-radius: 7px; overflow: hidden; }
+.mrow .fill { position: absolute; inset: 0 auto 0 0; background: var(--bar); border-radius: 7px; transition: width .45s ease; }
+.mrow.played .mv::after { content: " ●"; color: var(--accent); font-size: .7em; vertical-align: 2px; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
+.badge { font-size: .76rem; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); background: var(--surface-2); }
+.badge.g { border-color: var(--accent); color: var(--accent-ink); }
+.badge.a { border-color: var(--amber); color: var(--amber); }
+.qhi { color: var(--amber) !important; font-weight: 700; }
+.story { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; color: var(--ink-2); min-height: 5.2em; }
+
+/* temperature */
+.tslider { width: 100%; accent-color: var(--accent); margin: 8px 0 2px; }
+.tticks { display: flex; justify-content: space-between; font-size: .76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tlevel { font-family: var(--display); font-size: 1.15rem; font-weight: 650; color: var(--ink); }
+.tlevel .lv { font-family: var(--sans); font-size: .8rem; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: 2px; }
+.tlevel .lv.none { background: var(--rule); color: var(--ink-2); }
+
+.play-cta { display: inline-flex; align-items: center; gap: 10px; font-family: var(--sans); font-size: .95rem; font-weight: 600; text-decoration: none; color: #fff; background: var(--felt); border-radius: 999px; padding: 11px 20px; box-shadow: 0 6px 18px rgba(46, 125, 79, .28); }
+.play-cta:hover { background: var(--felt-dark); text-decoration: none; }
+.play-cta .d { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #cfcfcf 70%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+.cta-row { margin-top: 1.4em; }
+.callout.play { background: var(--primer-bg); border-color: var(--primer-line); border-left-color: var(--felt); }
+
+/* ---------- concept cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 1.6rem 0; }
+.cards .c { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; font-size: 1rem; line-height: 1.55; }
+.cards .c h4 { font-family: var(--display); font-weight: 650; margin: 0 0 .3em; font-size: 1.1rem; }
+.cards .c p { margin: 0; color: var(--ink-2); }
+.cards.five { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.cards.five .c { font-family: var(--sans); font-size: .88rem; padding: 14px; }
+.cards.five .c h4 { font-size: 1rem; }
+@media (max-width: 600px) { .cards { grid-template-columns: 1fr; } }
+
+/* ---------- tables ---------- */
+.tbl-wrap { overflow-x: auto; margin: 1.6rem 0; }
+table.ref { border-collapse: collapse; width: 100%; font-family: var(--sans); font-size: .9rem; font-variant-numeric: tabular-nums; }
+table.ref th, table.ref td { padding: 9px 12px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+table.ref th:first-child, table.ref td:first-child { text-align: left; }
+table.ref thead th { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; border-bottom: 2px solid var(--rule); }
+table.ref td.lv { font-weight: 700; color: var(--ink); }
+.tcap { font-family: var(--sans); font-size: .84rem; color: var(--muted); margin-top: .6em; }
+
+/* ---------- diagram ---------- */
+.loop svg { width: 100%; height: auto; display: block; }
+.loop .node rect { fill: var(--surface); stroke: var(--rule); stroke-width: 1.5; }
+.loop .node.hl rect { stroke: var(--accent); }
+.loop text { font-family: var(--sans); fill: var(--ink); }
+.loop .t1 { font-size: 15px; font-weight: 700; }
+.loop .t2 { font-size: 12.5px; fill: var(--muted); }
+.loop .arr { stroke: var(--accent); stroke-width: 2; fill: none; }
+.loop .arrlab { font-size: 12px; fill: var(--accent-ink); font-weight: 600; }
+
+/* math (pre-rendered LaTeX, inlined so it follows the text colour) */
+.math { overflow-x: auto; overflow-y: hidden; margin: 1.4rem 0; padding: 4px 0; text-align: center; color: var(--ink); }
+.math svg.eq { width: 100%; height: auto; display: inline-block; }
+
+/* ---------- footer ---------- */
+footer { border-top: 1px solid var(--rule); margin-top: 5rem; padding: 40px 20px 60px; font-family: var(--sans); font-size: .9rem; color: var(--muted); background: var(--surface-2); }
+footer h3 { font-family: var(--display); color: var(--ink); font-size: 1.15rem; margin: 0 0 .6em; }
+footer ol { padding-left: 1.3em; line-height: 1.55; }
+footer li { margin: .3em 0; }
+.endmark { text-align: center; color: var(--accent); font-size: 1.4rem; margin: 2.5rem 0 0; }
+</style>
+</head>
+<body>
+<div class="progress" id="progress" aria-hidden="true"></div>
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+
+<!-- ================================================================ HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="kicker">Reinforcement learning · Board games</div>
+      <h1>Teaching a Machine to Play Othello</h1>
+      <p class="dek">From hand-written bots to classic reinforcement learning to AlphaZero: what it takes for a program to learn a game where grabbing the most discs is usually the wrong move.</p>
+      <div class="byline"><span>By <strong>Palak Raisinghani</strong></span><span>October 2026</span><span>~25 min read</span></div>
+      <div class="cta-row"><a class="play-cta" href="https://palakraisinghani.github.io/O-Rolleto-PlayOthello/"><span class="d"></span>Play Othello online</a></div>
+    </div>
+    <div class="hero-board">
+      <div class="board-frame" id="heroBoard"></div>
+      <div class="hero-caption"><span class="live"></span><span id="heroCaption">Two of this project's bots playing each other, live in your browser</span></div>
+    </div>
+  </div>
+  <div class="stats" aria-label="Project at a glance">
+    <div class="stat"><div class="big">13</div><div class="lbl">agents compared on 6×6, from a random player to AlphaZero</div></div>
+    <div class="stat"><div class="big">100,096</div><div class="lbl">self-play games to train the 8×8 model</div></div>
+    <div class="stat"><div class="big">Edax 3–5</div><div class="lbl">where it lands against a world-class engine</div></div>
+    <div class="stat"><div class="big">1 model</div><div class="lbl">behind all four difficulty levels of an Othello app</div></div>
+  </div>
+</header>
+
+<main class="wrap">
+<article>
+<div class="col">
+
+<p style="margin-top:2.6rem">Othello's rules fit on a napkin. Place a disc so that it traps a line of your opponent's discs between two of yours, and every trapped disc flips to your colour. Whoever owns more discs when the board fills up wins.</p>
+
+<p>That last sentence is a trap. Owning the most discs only matters at the very end. In the middle of the game it is usually a <em>weakness</em>: every disc you own is a disc your opponent can flip back, and every disc you flip opens up more places for them to move. Beginners grab. Strong players hold back, guard the corners and quietly starve their opponent of moves.</p>
+
+<p>That makes Othello a lovely test for a learning machine. The only feedback, win or lose, arrives after dozens of moves, and the obvious stand-in for it points the wrong way. Can a program discover the real structure of the game from nothing but wins and losses?</p>
+
+<p>This post walks through what I found while building a ladder of Othello players: hand-written bots that never learn, five classic reinforcement-learning methods, three self-play methods, and a few experiments on a question I didn't expect to care about this much: <em>who makes a good practice partner?</em> The strongest agent, an AlphaZero-style player I named <strong>Oroletto</strong>, is the engine behind every difficulty level of an Othello app I'm building. The game itself is already <a href="https://palakraisinghani.github.io/O-Rolleto-PlayOthello/">online to play</a>.</p>
+
+<div class="tldr">
+  <h3>The short version</h3>
+  <ul class="arrows">
+    <li>Classic RL methods each hit a <strong>different wall</strong>: a table too big to fill, a learner that memorises its opponent, a model too simple to improve. None comes close to a bot that simply looks four moves ahead.</li>
+    <li><strong>Who you practise against matters</strong> as much as how you learn. A fixed opponent becomes a frozen target; self-play keeps every game informative.</li>
+    <li><strong>Search is the breakthrough.</strong> AlphaZero beats the look-ahead bot at its own game, and even its network on its own, with no search at all, plays as well as that bot.</li>
+    <li><strong>Variety alone doesn't help.</strong> Weak opponents teach little, and a population of copies of yourself teaches the same thing as one copy.</li>
+    <li>The recipe <strong>scales to the full 8×8 board</strong>, and one trained model gives an app four difficulty levels just by changing how adventurously it picks its moves.</li>
+  </ul>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <div class="tag">In this post</div>
+  <ol>
+    <li><a href="#rules">A game you can learn in a minute</a></li>
+    <li><a href="#bots">Three players that never learn</a></li>
+    <li><a href="#classic">Classic RL hits three different walls</a></li>
+    <li><a href="#frozen">A fixed opponent is a frozen target</a></li>
+    <li><a href="#selfplay">Self-play, and why search changes everything</a></li>
+    <li><a href="#alphazero">How AlphaZero decides on a move</a></li>
+    <li><a href="#variety">Does variety make a better teacher?</a></li>
+    <li><a href="#eight">Scaling up to the real board</a></li>
+    <li><a href="#levels">Four difficulty levels from one brain</a></li>
+    <li><a href="#learned">What I learned</a></li>
+  </ol>
+</nav>
+
+<div class="primer" id="primer">
+  <div class="tag">Primer</div>
+  <h3>Reinforcement learning in two minutes</h3>
+  <p>Reinforcement learning (RL) is learning by trial and error. An <strong>agent</strong> looks at the current situation (the <strong>state</strong>), picks an <strong>action</strong>, and the environment answers with a new state and, sometimes, a <strong>reward</strong>. Over many attempts the agent adjusts its behaviour, its <strong>policy</strong>, to collect as much reward as it can.</p>
+  <p>In Othello the state is the board, an action is a move, and the reward is +1 for a win, −1 for a loss and 0 for a draw, handed out only when the game ends. Two ideas do most of the work in everything below:</p>
+  <ul class="plain">
+    <li>A <strong>value</strong> says how good a position, or a move in a position, is: the reward you can expect from there on. Learn good values and good moves follow.</li>
+    <li><strong>Credit assignment</strong> is the puzzle of figuring out which of thirty moves earned the win when the only feedback is the final result. Most of what makes RL hard, and most of what separates the methods in this post, comes down to how they solve it.</li>
+  </ul>
+  <p>Board games are a favourite playground because the simulator is perfect and free, so you can play millions of games, and because an agent can practise against copies of itself. The field's history is largely a history of games:</p>
+  <div class="timeline" role="list">
+    <div class="ev" role="listitem"><div class="yr">1959</div><div class="sys">Samuel's checkers</div>Learns the weights of an evaluation by comparing it with deeper search.</div>
+    <div class="ev oth" role="listitem"><div class="yr">1982</div><div class="sys">IAGO · Othello</div>Hand-built evaluation that made mobility a central idea.</div>
+    <div class="ev" role="listitem"><div class="yr">1995</div><div class="sys">TD-Gammon</div>A neural network learns backgammon by playing itself and reaches top human level.</div>
+    <div class="ev oth" role="listitem"><div class="yr">1997</div><div class="sys">Logistello · Othello</div>Pattern-based evaluation fitted from self-play games; beats the world champion 6–0.</div>
+    <div class="ev" role="listitem"><div class="yr">1997</div><div class="sys">Deep Blue</div>Massive search with a hand-tuned evaluation and no learning; beats Kasparov.</div>
+    <div class="ev" role="listitem"><div class="yr">2015</div><div class="sys">DQN</div>Deep Q-learning plays Atari games from raw pixels.</div>
+    <div class="ev" role="listitem"><div class="yr">2016–18</div><div class="sys">AlphaGo → AlphaZero</div>Networks guide a tree search; finally pure self-play masters Go, chess and shogi.</div>
+    <div class="ev" role="listitem"><div class="yr">2019</div><div class="sys">AlphaStar</div>A league of past selves and dedicated exploiters for StarCraft II.</div>
+    <div class="ev oth" role="listitem"><div class="yr">2023</div><div class="sys">Othello is solved</div>With perfect play, 8×8 Othello is a draw.</div>
+  </div>
+  <div class="tl-note">Scroll sideways for more. Othello milestones in amber.</div>
+</div>
+
+<!-- ================================================================ RULES -->
+</div>
+<section id="rules">
+<div class="col">
+<h2><span class="num">01</span>A game you can learn in a minute</h2>
+<p>Most of this project runs on a 6×6 board, where games are short and experiments are cheap, before moving to the standard 8×8 board at the end. The rules don't change with the size.</p>
+<ul class="plain">
+  <li><strong>A move must capture.</strong> You place a disc so that one or more of your opponent's discs lie in a straight line between it and another of your discs: across, down or diagonally.</li>
+  <li><strong>Captured discs flip</strong> to your colour, along every line the new disc closes at once.</li>
+  <li><strong>No legal move means you pass</strong>, and your opponent moves again. You can never pass by choice.</li>
+  <li><strong>The game ends</strong> when the board is full or neither side can move. Most discs wins.</li>
+</ul>
+</div>
+
+<div class="wide">
+  <div class="gallery-3" id="rulesGallery"></div>
+  <div class="legend" id="rulesLegend" aria-label="Legend"></div>
+</div>
+
+<div class="widget" id="play">
+  <div class="w-head">
+    <div class="w-title">Your turn: play the yardstick bots</div>
+    <div class="w-sub">The three bots below are the ones every learner in this post is measured against.</div>
+  </div>
+  <div class="w-grid">
+    <div class="board-col">
+      <div class="board-frame" id="playBoard"></div>
+    </div>
+    <div class="side">
+      <div class="controls">
+        <span class="lab">Opponent</span>
+        <div class="seg" id="oppSeg" role="group" aria-label="Choose opponent">
+          <button data-opp="random" aria-pressed="false">Random</button>
+          <button data-opp="heuristic" aria-pressed="true">Heuristic</button>
+          <button data-opp="minimax" aria-pressed="false">Minimax</button>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="newGame">New game</button>
+        <button class="btn" id="swapCol">Play as White</button>
+      </div>
+      <div class="status" id="playStatus" aria-live="polite"></div>
+      <div class="scoreline"><span><span class="dot b"></span><span id="scB">2</span></span><span><span class="dot w"></span><span id="scW">2</span></span></div>
+      <p class="note" id="oppNote"></p>
+      <p class="note">Green dots mark your legal moves. Black moves first.</p>
+      <p class="note">Want the full 8×8 game? <a href="https://palakraisinghani.github.io/O-Rolleto-PlayOthello/">Play it here</a>.</p>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+<h3>What good players know</h3>
+<p>Four ideas come back again and again in this post, both in how the bots are built and in what the learners do or fail to discover.</p>
+<div class="cards">
+  <div class="c"><h4>Corners are forever</h4><p>No line can ever trap a corner disc, so it can never be flipped. A corner also lets the discs along its edges become permanent.</p></div>
+  <div class="c"><h4>Next to a corner is poison</h4><p>The square diagonally next to an empty corner (the <em>X-square</em>) usually hands that corner to your opponent.</p></div>
+  <div class="c"><h4>Mobility is power</h4><p>Keep many moves available to yourself and few to your opponent, and eventually they are forced onto the squares that give corners away.</p></div>
+  <div class="c"><h4>The disc-count trap</h4><p>Lots of discs mid-game means lots of discs to be flipped back and lots of moves handed to your opponent. Only the final count matters.</p></div>
+</div>
+<p>One more fact turns out to be useful later. Both boards used here are solved. On 6×6, perfect play gives White, the second player, a 20–16 win. On 8×8, perfect play was shown in 2023 to end in a draw. The game is still far too big to look up moves in a table, so it remains a genuine learning problem.</p>
+</div>
+</section>
+
+<!-- ================================================================ BOTS -->
+<section id="bots" class="col">
+<h2><span class="num">02</span>Three players that never learn</h2>
+<p>Before training anything I built three opponents from hand-written rules. They are the yardsticks for everything that follows, so they need to form a clear ladder.</p>
+<p><strong>The random bot</strong> plays any legal move. It is the floor: anything that has learned something should beat it.</p>
+<p><strong>The heuristic bot</strong> looks exactly one move ahead. For every legal move it scores the resulting position with a weighted sum of four features (corners, mobility, disc count and X-squares, each as "mine minus yours") and plays the best one. I picked the weights by a grid search, playing 96 different weightings against a weak, a medium and a strong reference bot.</p>
+<div class="callout"><p>The grid search measured the disc-count trap directly. Corners carry almost all of the heuristic's strength and mobility comes second. Disc count contributes almost nothing, and a bot that only counts discs is barely better than random.</p></div>
+<p><strong>The minimax bot</strong> adds lookahead. It searches several moves deep, assuming both sides always play their best reply, and scores the positions at the end of the search with the heuristic. A standard trick called alpha-beta pruning skips branches that can't change the decision.</p>
+</section>
+
+<figure class="chart narrow">
+  <div class="card"><img src="assets/minimax_depth.svg" alt="Score of minimax against the heuristic bot rising with search depth, plotted against the number of positions searched per move." loading="lazy"></div>
+  <figcaption><b>Lookahead pays, with diminishing returns.</b> Minimax at depths 1–5 against the heuristic bot on 6×6, plotted against search cost (positions examined per move). Error bars: 95% confidence intervals.</figcaption>
+</figure>
+
+<div class="col">
+<p>The first couple of extra moves of lookahead buy most of the strength; after that each extra move costs several times more search for a smaller gain. I settled on <strong>minimax at depth 4</strong> as the reference opponent: past the steep part of the curve, and cheap enough to play thousands of evaluation games. Random, heuristic and minimax-d4 form a strict ladder on 6×6, 8×8 and 10×10 boards, which is exactly what a yardstick needs.</p>
+
+<div class="scorebox">
+  <div class="tag">Method note</div>
+  <h4>How I keep score</h4>
+  <p>Every match starts from a set of random six-move openings, and each opening is played twice with the colours swapped, so the first-move advantage cancels out. The <strong>score</strong> counts a win as 1 and a draw as ½, from the first-named player's side, and comes with a 95% confidence interval. Every learner is trained with three independent random seeds.</p>
+</div>
+</div>
+
+<!-- ================================================================ CLASSIC -->
+<section id="classic" class="col">
+<h2><span class="num">03</span>Classic RL hits three different walls</h2>
+<p>The first learners are the textbook methods. Each one trains for 200,000 games against the heuristic bot, starting from random openings and switching colours every game, and then plays all three yardstick bots.</p>
+<div class="cards five">
+  <div class="c"><h4>Q-learning</h4><p>A lookup table with one value per position and move, nudged towards the reward plus its own estimate of the next position.</p></div>
+  <div class="c"><h4>SARSA</h4><p>The same table, but it learns about the moves it actually plays, exploration included.</p></div>
+  <div class="c"><h4>Monte Carlo control</h4><p>Waits until the game ends, then moves every value it visited towards the actual result.</p></div>
+  <div class="c"><h4>Linear features</h4><p>A value is a weighted sum of six hand-picked features, so similar positions get similar values.</p></div>
+  <div class="c"><h4>DQN</h4><p>A neural network reads the raw board and learns its own features.</p></div>
+</div>
+</section>
+
+<figure class="chart">
+  <div class="card"><img src="assets/classical_bars.svg" alt="Bar chart of final scores of five classic RL methods against the random, heuristic and minimax-d4 bots." loading="lazy"></div>
+  <figcaption><b>Five methods, five outcomes.</b> Final score of each classic method against the three yardstick bots (mean of three runs; whiskers show the spread between runs). The dotted line marks an even match.</figcaption>
+</figure>
+
+<div class="col">
+<p>Nothing beats the minimax bot, and the methods fail in strikingly different ways. The learning curves show the three walls.</p>
+</div>
+
+<figure class="chart">
+  <div class="card"><img src="assets/classical_curves.svg" alt="Learning curves of the five classic methods: Q-learning and SARSA stay flat near the bottom, linear features plateau at once, Monte Carlo and DQN climb slowly." loading="lazy"></div>
+  <figcaption><b>Flat, instantly stuck, or slowly climbing.</b> Score against the training opponent (the heuristic bot) during training; lines are the mean of three runs, bands the range. Q-learning and SARSA overlap almost exactly.</figcaption>
+</figure>
+
+<div class="col">
+<h3>Wall 1: the table is too big</h3>
+<p>Q-learning and SARSA never get past random play. After 200,000 games their tables hold well over a million positions, yet when they meet the random bot, fewer than one in ten of the positions they face is in the table at all. Othello has far too many positions to learn one at a time. The two methods also behave identically, which surprised me until I saw why: they differ only in which next-position value they learn from, and that position is almost always one they have never seen, so both read the same default zero.</p>
+
+<h3>Wall 2: memorising the opponent</h3>
+<p>Monte Carlo control is the odd one out. It beats the heuristic bot it trained against, yet against the <em>random</em> bot, the easiest opponent there is, it does no better than a coin flip. Something that had learned Othello would find random play the easiest of all. Instead, against a nearly predictable opponent the same lines of play keep coming back, and Monte Carlo control memorised a growing book of winning lines against that one bot. I had added random openings and an occasional random move to the heuristic bot precisely to prevent this. It wasn't enough.</p>
+
+<h3>Wall 3: a model too simple to improve</h3>
+<p>The linear learner generalises: similar positions get similar values whether it has seen them or not, so it beats the random bot almost immediately. Then it stops. The best thing a weighted sum of those six features can express is a re-weighted version of the heuristic bot, and it finds those weights within a few thousand games. More data can't fix a model that has nothing better to say.</p>
+
+<h3>DQN: the best of them, and still blind to the future</h3>
+<p>DQN combines the missing pieces: it generalises like the linear model, but it learns its own features from the raw board, and a replay buffer and a slowly updated target network keep its learning stable. It is the only classic method that clearly beats its training opponent without forgetting how to play everyone else. But it still picks each move from a single glance at the board, with no lookahead, and the minimax bot punishes exactly the tactical oversights that a one-glance player can't see.</p>
+<div class="callout"><p>Every classic learner chooses its move from what the board looks like right now. None of them learns to look ahead, and that, not the amount of training, is what separates them from a simple search bot.</p></div>
+</div>
+
+<!-- ================================================================ FROZEN -->
+<section id="frozen" class="col">
+<h2><span class="num">04</span>A fixed opponent is a frozen target</h2>
+<p>All the classic learners practised against the same heuristic bot. Was that holding DQN back? To find out, I trained identical DQNs against three different fixed opponents (the random bot, the heuristic bot and minimax looking three moves ahead) and one more that only ever played <em>itself</em>.</p>
+<p>The naive expectation is a ceiling: a learner can't get stronger than its teacher. That's wrong. The classic DQN already beats its own trainer most of the time. The real limit is subtler.</p>
+</section>
+
+<figure class="chart">
+  <div class="card"><img src="assets/fo_trainer_curves.svg" alt="Three panels of checkpoint scores for learners trained against random, heuristic and minimax-d3, against their own trainer and the other bots." loading="lazy"></div>
+  <figcaption><b>Each learner against its own trainer (thick solid line) and the other bots (dashed)</b>, at checkpoints through training. Mean of three runs.</figcaption>
+</figure>
+
+<div class="col">
+<p>The learner trained against the random bot hits its final level almost immediately and stays there. Once you beat an opponent nearly every game, the games stop saying anything about which moves mattered. That is the <strong>frozen target</strong>. The heuristic-trained learner still improves, but slowly. Only the learner facing the strongest bot is still climbing at the end, because it still loses often enough for each game to carry information.</p>
+<p>There is a second effect. Against the rule-based bots, strength follows the trainer, with the minimax-trained learner on top. But when the learners play <em>each other</em>, that advantage disappears.</p>
+</div>
+
+<figure class="chart narrow">
+  <div class="card"><img src="assets/fo_h2h.svg" alt="Heatmap of head-to-head scores between the five learners." loading="lazy"></div>
+  <figcaption><b>Round robin between the learners.</b> Each cell is the row learner's score against the column learner over 1,800 games. Blue: the row learner wins; red: it loses.</figcaption>
+</figure>
+
+<div class="col">
+<p>Minimax and the heuristic bot share the same evaluation function, so a learner trained against one of them gets very good at beating that particular <em>style</em> of play, which flatters it against that family of bots and nobody else. The self-play learner never met a single bot during training, and it beats every fixed-opponent learner head-to-head.</p>
+<div class="callout"><p>A fixed opponent doesn't cap a learner, but it freezes its target and narrows what it learns to one style. An opponent that improves along with the learner fixes both problems. That opponent is yourself.</p></div>
+</div>
+
+<!-- ================================================================ SELF-PLAY -->
+<section id="selfplay" class="col">
+<h2><span class="num">05</span>Self-play, and why search changes everything</h2>
+<p>Self-play means the learner's opponent is itself, or saved copies of its earlier selves. No hand-written opponent is needed, and the opponent's strength always matches the learner's. I compared three self-play methods, all trained without ever seeing a rule-based bot:</p>
+<ul class="plain">
+  <li><strong>DQN+</strong>: DQN with a fix for its habit of overestimating values (Double DQN), playing a pool of its own past snapshots half the time.</li>
+  <li><strong>PPO</strong>: a policy-gradient method that learns a policy directly and keeps each update small, a workhorse of modern RL.</li>
+  <li><strong>AlphaZero</strong>: a neural network combined with a tree search that looks ahead before every move. It gets its own section next.</li>
+</ul>
+</section>
+
+<figure class="chart">
+  <div class="card"><img src="assets/selfplay_bars.svg" alt="Bar chart: DQN, DQN+, PPO, AlphaZero network only, and AlphaZero against the three bots; AlphaZero is far ahead." loading="lazy"></div>
+  <figcaption><b>One very large gap.</b> Final scores of the self-play methods against the three bots, with the classic DQN for reference (mean of three runs). "Net only" is AlphaZero's trained network playing its top move with no search.</figcaption>
+</figure>
+
+<div class="col">
+<p>Self-play without search lands right where the best fixed-opponent learner did. That's a real result: DQN+ and PPO reach that strength without ever meeting the heuristic bot, and neither shows Monte Carlo's "beats its trainer but not a random player" failure. But they share the same ceiling, which I attribute to what they have in common: one glance at the board per move.</p>
+<p>AlphaZero is in a different league. It is the first agent in this project that clearly beats the minimax bot, and the two AlphaZero bars show that search helps it in two separate ways:</p>
+<ul class="arrows">
+  <li><strong>Search at play time.</strong> Letting the same network look ahead before each move adds a large margin, most of all against minimax. Search does what minimax does: it checks the replies, which removes the blunders a one-glance player can't see.</li>
+  <li><strong>Search as a teacher.</strong> Even with no search at all, AlphaZero's network plays as well as minimax-d4, where the DQN+ and PPO networks win about one game in five. The difference is what it was trained on: the results of a lookahead search, not raw game outcomes one move at a time.</li>
+</ul>
+<p>One caveat I couldn't resolve: AlphaZero's network is a convolutional network, which sees the board as a grid, while DQN+ and PPO use plain fully connected layers. Part of that second gap could come from the architecture rather than the training signal, and separating the two would need another run.</p>
+</div>
+
+<figure class="chart">
+  <div class="card"><img src="assets/selfplay_curves.svg" alt="Learning curves against the heuristic bot: AlphaZero shoots up within the first checkpoint, the others climb slowly." loading="lazy"></div>
+  <figcaption><b>AlphaZero gets strong almost immediately.</b> Score against the heuristic bot during training (mean of three runs; bands show the range). Only the classic DQN ever trains against this bot. AlphaZero's games are far more expensive, which is why its curve is shorter.</figcaption>
+</figure>
+
+<div class="col">
+<p>Per game, AlphaZero is much more expensive, since every move runs a search guided by the network. Even so, it passed a level within its first twenty minutes of training that PPO never reached in its full run. Its learning curve against the heuristic bot also saturates quickly, which is a limitation of that yardstick rather than of the learner: once you win almost every game, the curve can't show further progress.</p>
+
+<div class="aside">
+  <div class="tag">Aside</div>
+  <h4>Does it know who wins?</h4>
+  <p>6×6 Othello is solved: with perfect play from the start, White wins 20–16. When asked to evaluate the starting position, the trained network says clearly that Black loses, and when it plays itself from the start, White wins every game. It does not play perfectly, though. White always wins by more than four discs, which means Black is making mistakes. It has learned <em>who</em> wins, not yet <em>exactly how</em>.</p>
+</div>
+
+<p>Of the three AlphaZero training runs, the one that scored best against the minimax bot became the project's final 6×6 model: <strong>Oroletto</strong>.</p>
+</div>
+
+<!-- ================================================================ ALPHAZERO -->
+<section id="alphazero" class="col">
+<h2><span class="num">06</span>How AlphaZero decides on a move</h2>
+<p>AlphaZero has two parts. A <strong>neural network</strong> provides fast intuition: given a board, it outputs a probability for every legal move (the <em>prior</em>, "which moves look promising") and a <em>value</em> between −1 and +1 ("who is winning"). A <strong>tree search</strong> then checks that intuition by looking ahead.</p>
+
+<h3>The search</h3>
+<p>Before every move, AlphaZero runs a fixed number of <em>simulations</em>. Each simulation walks down a tree of possible continuations, at each step choosing the move that maximises</p>
+<div class="math"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="eq" role="img" aria-label="a-star equals the argmax over moves a of Q of s,a (the evidence) plus c times P of s,a times the square root of N of s over 1 plus N of s,a (the exploration bonus)" style="max-width:560px" viewBox="0 0 216.11 45.57">
+<defs>
+<g>
+<g id="eqa-glyph-0-0">
+<path d="M 3.6875 -3.734375 C 3.5 -4.09375 3.21875 -4.359375 2.78125 -4.359375 C 1.625 -4.359375 0.390625 -2.90625 0.390625 -1.46875 C 0.390625 -0.546875 0.9375 0.109375 1.703125 0.109375 C 1.90625 0.109375 2.40625 0.0625 2.984375 -0.625 C 3.078125 -0.21875 3.421875 0.109375 3.890625 0.109375 C 4.234375 0.109375 4.46875 -0.125 4.625 -0.4375 C 4.796875 -0.796875 4.921875 -1.390625 4.921875 -1.40625 C 4.921875 -1.515625 4.828125 -1.515625 4.796875 -1.515625 C 4.703125 -1.515625 4.6875 -1.46875 4.65625 -1.328125 C 4.5 -0.6875 4.3125 -0.109375 3.90625 -0.109375 C 3.640625 -0.109375 3.609375 -0.359375 3.609375 -0.5625 C 3.609375 -0.78125 3.640625 -0.859375 3.75 -1.296875 C 3.84375 -1.703125 3.875 -1.8125 3.953125 -2.1875 L 4.3125 -3.5625 C 4.390625 -3.84375 4.390625 -3.859375 4.390625 -3.90625 C 4.390625 -4.0625 4.265625 -4.171875 4.09375 -4.171875 C 3.859375 -4.171875 3.71875 -3.953125 3.6875 -3.734375 Z M 3.046875 -1.171875 C 2.984375 -1 2.984375 -0.984375 2.84375 -0.8125 C 2.40625 -0.265625 2 -0.109375 1.734375 -0.109375 C 1.234375 -0.109375 1.09375 -0.65625 1.09375 -1.03125 C 1.09375 -1.53125 1.40625 -2.75 1.640625 -3.203125 C 1.953125 -3.78125 2.390625 -4.140625 2.78125 -4.140625 C 3.421875 -4.140625 3.5625 -3.34375 3.5625 -3.28125 C 3.5625 -3.21875 3.546875 -3.15625 3.53125 -3.109375 Z M 3.046875 -1.171875 "/>
+</g>
+<g id="eqa-glyph-0-1">
+<path d="M 4.328125 -0.0625 C 5.859375 -0.640625 7.3125 -2.40625 7.3125 -4.3125 C 7.3125 -5.890625 6.265625 -6.96875 4.796875 -6.96875 C 2.65625 -6.96875 0.484375 -4.71875 0.484375 -2.421875 C 0.484375 -0.78125 1.59375 0.21875 3.015625 0.21875 C 3.265625 0.21875 3.59375 0.171875 3.984375 0.0625 C 3.9375 0.6875 3.9375 0.703125 3.9375 0.828125 C 3.9375 1.140625 3.9375 1.921875 4.765625 1.921875 C 5.9375 1.921875 6.40625 0.109375 6.40625 0 C 6.40625 -0.0625 6.34375 -0.09375 6.296875 -0.09375 C 6.21875 -0.09375 6.203125 -0.046875 6.1875 0.015625 C 5.9375 0.71875 5.375 0.953125 5.03125 0.953125 C 4.578125 0.953125 4.421875 0.6875 4.328125 -0.0625 Z M 2.453125 -0.140625 C 1.6875 -0.4375 1.359375 -1.21875 1.359375 -2.109375 C 1.359375 -2.78125 1.609375 -4.1875 2.359375 -5.25 C 3.078125 -6.265625 4.015625 -6.71875 4.734375 -6.71875 C 5.71875 -6.71875 6.4375 -5.9375 6.4375 -4.625 C 6.4375 -3.640625 5.9375 -1.328125 4.28125 -0.390625 C 4.21875 -0.734375 4.125 -1.46875 3.40625 -1.46875 C 2.890625 -1.46875 2.40625 -0.96875 2.40625 -0.453125 C 2.40625 -0.25 2.453125 -0.140625 2.453125 -0.140625 Z M 3.078125 -0.03125 C 2.9375 -0.03125 2.609375 -0.03125 2.609375 -0.453125 C 2.609375 -0.84375 2.984375 -1.25 3.40625 -1.25 C 3.828125 -1.25 4.015625 -1 4.015625 -0.40625 C 4.015625 -0.25 4 -0.25 3.90625 -0.203125 C 3.640625 -0.09375 3.34375 -0.03125 3.078125 -0.03125 Z M 3.078125 -0.03125 "/>
+</g>
+<g id="eqa-glyph-0-2">
+<path d="M 3.859375 -3.6875 C 3.578125 -3.6875 3.390625 -3.46875 3.390625 -3.25 C 3.390625 -3.109375 3.46875 -2.96875 3.6875 -2.96875 C 3.90625 -2.96875 4.140625 -3.125 4.140625 -3.515625 C 4.140625 -3.953125 3.71875 -4.359375 2.96875 -4.359375 C 1.671875 -4.359375 1.296875 -3.359375 1.296875 -2.921875 C 1.296875 -2.15625 2.03125 -2 2.328125 -1.953125 C 2.828125 -1.84375 3.34375 -1.734375 3.34375 -1.1875 C 3.34375 -0.9375 3.125 -0.109375 1.9375 -0.109375 C 1.796875 -0.109375 1.03125 -0.109375 0.8125 -0.625 C 1.1875 -0.578125 1.4375 -0.875 1.4375 -1.15625 C 1.4375 -1.375 1.28125 -1.5 1.0625 -1.5 C 0.8125 -1.5 0.515625 -1.296875 0.515625 -0.84375 C 0.515625 -0.28125 1.078125 0.109375 1.921875 0.109375 C 3.53125 0.109375 3.90625 -1.09375 3.90625 -1.53125 C 3.90625 -1.890625 3.71875 -2.140625 3.609375 -2.25 C 3.34375 -2.53125 3.046875 -2.578125 2.609375 -2.671875 C 2.265625 -2.75 1.859375 -2.8125 1.859375 -3.265625 C 1.859375 -3.546875 2.109375 -4.140625 2.96875 -4.140625 C 3.21875 -4.140625 3.71875 -4.078125 3.859375 -3.6875 Z M 3.859375 -3.6875 "/>
+</g>
+<g id="eqa-glyph-0-3">
+<path d="M 2 -0.015625 C 2 -0.65625 1.75 -1.046875 1.375 -1.046875 C 1.046875 -1.046875 0.84375 -0.796875 0.84375 -0.515625 C 0.84375 -0.25 1.046875 0 1.375 0 C 1.484375 0 1.625 -0.046875 1.71875 -0.125 C 1.75 -0.140625 1.75 -0.15625 1.765625 -0.15625 C 1.78125 -0.15625 1.78125 -0.140625 1.78125 -0.015625 C 1.78125 0.71875 1.4375 1.3125 1.109375 1.640625 C 1 1.75 1 1.765625 1 1.796875 C 1 1.859375 1.0625 1.90625 1.109375 1.90625 C 1.21875 1.90625 2 1.140625 2 -0.015625 Z M 2 -0.015625 "/>
+</g>
+<g id="eqa-glyph-0-4">
+<path d="M 3.90625 -3.75 C 3.75 -3.75 3.609375 -3.75 3.46875 -3.609375 C 3.3125 -3.46875 3.296875 -3.296875 3.296875 -3.234375 C 3.296875 -2.984375 3.46875 -2.890625 3.65625 -2.890625 C 3.953125 -2.890625 4.21875 -3.125 4.21875 -3.515625 C 4.21875 -4 3.75 -4.359375 3.046875 -4.359375 C 1.71875 -4.359375 0.40625 -2.953125 0.40625 -1.5625 C 0.40625 -0.671875 0.984375 0.109375 2 0.109375 C 3.421875 0.109375 4.25 -0.9375 4.25 -1.0625 C 4.25 -1.109375 4.1875 -1.1875 4.125 -1.1875 C 4.078125 -1.1875 4.0625 -1.171875 4 -1.09375 C 3.21875 -0.109375 2.140625 -0.109375 2.03125 -0.109375 C 1.40625 -0.109375 1.140625 -0.59375 1.140625 -1.1875 C 1.140625 -1.59375 1.328125 -2.546875 1.671875 -3.15625 C 1.96875 -3.71875 2.515625 -4.140625 3.0625 -4.140625 C 3.390625 -4.140625 3.765625 -4.015625 3.90625 -3.75 Z M 3.90625 -3.75 "/>
+</g>
+<g id="eqa-glyph-0-5">
+<path d="M 2.984375 -3.125 L 4.671875 -3.125 C 6.078125 -3.125 7.453125 -4.140625 7.453125 -5.25 C 7.453125 -6.015625 6.796875 -6.75 5.5 -6.75 L 2.296875 -6.75 C 2.109375 -6.75 2 -6.75 2 -6.5625 C 2 -6.4375 2.09375 -6.4375 2.296875 -6.4375 C 2.421875 -6.4375 2.59375 -6.421875 2.71875 -6.421875 C 2.875 -6.40625 2.9375 -6.375 2.9375 -6.265625 C 2.9375 -6.21875 2.921875 -6.1875 2.890625 -6.078125 L 1.5625 -0.765625 C 1.46875 -0.390625 1.453125 -0.3125 0.671875 -0.3125 C 0.5 -0.3125 0.390625 -0.3125 0.390625 -0.125 C 0.390625 0 0.515625 0 0.546875 0 C 0.8125 0 1.515625 -0.03125 1.796875 -0.03125 C 2 -0.03125 2.21875 -0.015625 2.421875 -0.015625 C 2.640625 -0.015625 2.859375 0 3.078125 0 C 3.140625 0 3.265625 0 3.265625 -0.203125 C 3.265625 -0.3125 3.1875 -0.3125 2.984375 -0.3125 C 2.625 -0.3125 2.34375 -0.3125 2.34375 -0.484375 C 2.34375 -0.546875 2.375 -0.59375 2.375 -0.65625 Z M 3.703125 -6.0625 C 3.796875 -6.40625 3.8125 -6.4375 4.234375 -6.4375 L 5.1875 -6.4375 C 6 -6.4375 6.53125 -6.171875 6.53125 -5.484375 C 6.53125 -5.109375 6.328125 -4.25 5.9375 -3.90625 C 5.453125 -3.453125 4.859375 -3.375 4.421875 -3.375 L 3.03125 -3.375 Z M 3.703125 -6.0625 "/>
+</g>
+<g id="eqa-glyph-0-6">
+<path d="M 7.46875 -5.703125 C 7.5625 -6.109375 7.734375 -6.40625 8.53125 -6.4375 C 8.578125 -6.4375 8.703125 -6.453125 8.703125 -6.640625 C 8.703125 -6.640625 8.703125 -6.75 8.578125 -6.75 C 8.25 -6.75 7.90625 -6.71875 7.578125 -6.71875 C 7.234375 -6.71875 6.890625 -6.75 6.5625 -6.75 C 6.5 -6.75 6.390625 -6.75 6.390625 -6.546875 C 6.390625 -6.4375 6.484375 -6.4375 6.5625 -6.4375 C 7.125 -6.421875 7.234375 -6.21875 7.234375 -6 C 7.234375 -5.96875 7.21875 -5.828125 7.203125 -5.796875 L 6.109375 -1.40625 L 3.921875 -6.5625 C 3.84375 -6.734375 3.828125 -6.75 3.609375 -6.75 L 2.28125 -6.75 C 2.078125 -6.75 2 -6.75 2 -6.546875 C 2 -6.4375 2.078125 -6.4375 2.265625 -6.4375 C 2.328125 -6.4375 2.9375 -6.4375 2.9375 -6.34375 L 1.625 -1.046875 C 1.515625 -0.65625 1.359375 -0.328125 0.546875 -0.3125 C 0.5 -0.3125 0.390625 -0.296875 0.390625 -0.109375 C 0.390625 -0.046875 0.4375 0 0.515625 0 C 0.828125 0 1.171875 -0.03125 1.5 -0.03125 C 1.84375 -0.03125 2.1875 0 2.515625 0 C 2.5625 0 2.703125 0 2.703125 -0.203125 C 2.703125 -0.296875 2.609375 -0.3125 2.5 -0.3125 C 1.921875 -0.328125 1.84375 -0.546875 1.84375 -0.734375 C 1.84375 -0.8125 1.859375 -0.859375 1.890625 -0.96875 L 3.1875 -6.1875 C 3.234375 -6.125 3.234375 -6.109375 3.28125 -6 L 5.734375 -0.1875 C 5.8125 -0.015625 5.84375 0 5.921875 0 C 6.03125 0 6.03125 -0.03125 6.078125 -0.203125 Z M 7.46875 -5.703125 "/>
+</g>
+<g id="eqa-glyph-1-0">
+<path d="M 2.234375 -1.71875 C 2.796875 -1.96875 3.046875 -2.0625 3.21875 -2.140625 C 3.359375 -2.203125 3.421875 -2.234375 3.421875 -2.359375 C 3.421875 -2.484375 3.328125 -2.578125 3.203125 -2.578125 C 3.15625 -2.578125 3.140625 -2.578125 3.0625 -2.515625 L 2.125 -1.890625 L 2.21875 -2.921875 C 2.234375 -3.03125 2.21875 -3.21875 2.015625 -3.21875 C 1.9375 -3.21875 1.796875 -3.15625 1.796875 -3 C 1.796875 -2.9375 1.828125 -2.734375 1.84375 -2.671875 C 1.84375 -2.546875 1.90625 -2.046875 1.90625 -1.890625 L 0.984375 -2.515625 C 0.90625 -2.5625 0.890625 -2.578125 0.828125 -2.578125 C 0.703125 -2.578125 0.609375 -2.484375 0.609375 -2.359375 C 0.609375 -2.21875 0.703125 -2.1875 0.765625 -2.15625 L 1.796875 -1.734375 C 1.234375 -1.484375 0.984375 -1.375 0.8125 -1.296875 C 0.671875 -1.25 0.609375 -1.21875 0.609375 -1.078125 C 0.609375 -0.96875 0.703125 -0.859375 0.828125 -0.859375 C 0.875 -0.859375 0.890625 -0.859375 0.96875 -0.921875 L 1.90625 -1.546875 L 1.796875 -0.4375 C 1.796875 -0.296875 1.9375 -0.234375 2.015625 -0.234375 C 2.09375 -0.234375 2.234375 -0.296875 2.234375 -0.4375 C 2.234375 -0.5 2.203125 -0.71875 2.203125 -0.78125 C 2.1875 -0.890625 2.140625 -1.390625 2.125 -1.546875 L 2.953125 -1 C 3.125 -0.859375 3.140625 -0.859375 3.203125 -0.859375 C 3.328125 -0.859375 3.421875 -0.96875 3.421875 -1.078125 C 3.421875 -1.21875 3.328125 -1.25 3.28125 -1.28125 Z M 2.234375 -1.71875 "/>
+</g>
+<g id="eqa-glyph-2-0">
+<path d="M 6.78125 -3.234375 C 6.9375 -3.234375 7.125 -3.234375 7.125 -3.421875 C 7.125 -3.625 6.9375 -3.625 6.796875 -3.625 L 0.875 -3.625 C 0.734375 -3.625 0.546875 -3.625 0.546875 -3.421875 C 0.546875 -3.234375 0.734375 -3.234375 0.890625 -3.234375 Z M 6.796875 -1.3125 C 6.9375 -1.3125 7.125 -1.3125 7.125 -1.515625 C 7.125 -1.703125 6.9375 -1.703125 6.78125 -1.703125 L 0.890625 -1.703125 C 0.734375 -1.703125 0.546875 -1.703125 0.546875 -1.515625 C 0.546875 -1.3125 0.734375 -1.3125 0.875 -1.3125 Z M 6.796875 -1.3125 "/>
+</g>
+<g id="eqa-glyph-2-1">
+<path d="M 3.28125 -0.75 C 3.328125 -0.359375 3.59375 0.0625 4.0625 0.0625 C 4.265625 0.0625 4.875 -0.078125 4.875 -0.875 L 4.875 -1.4375 L 4.625 -1.4375 L 4.625 -0.875 C 4.625 -0.3125 4.375 -0.25 4.265625 -0.25 C 3.9375 -0.25 3.90625 -0.6875 3.90625 -0.734375 L 3.90625 -2.71875 C 3.90625 -3.125 3.90625 -3.515625 3.546875 -3.875 C 3.15625 -4.265625 2.671875 -4.421875 2.1875 -4.421875 C 1.375 -4.421875 0.703125 -3.953125 0.703125 -3.3125 C 0.703125 -3.015625 0.90625 -2.84375 1.15625 -2.84375 C 1.4375 -2.84375 1.609375 -3.046875 1.609375 -3.296875 C 1.609375 -3.421875 1.5625 -3.75 1.109375 -3.75 C 1.375 -4.09375 1.859375 -4.203125 2.171875 -4.203125 C 2.65625 -4.203125 3.21875 -3.828125 3.21875 -2.9375 L 3.21875 -2.578125 C 2.71875 -2.546875 2.03125 -2.515625 1.40625 -2.21875 C 0.65625 -1.890625 0.421875 -1.375 0.421875 -0.9375 C 0.421875 -0.140625 1.375 0.109375 2 0.109375 C 2.640625 0.109375 3.09375 -0.28125 3.28125 -0.75 Z M 3.21875 -2.375 L 3.21875 -1.375 C 3.21875 -0.4375 2.515625 -0.109375 2.0625 -0.109375 C 1.578125 -0.109375 1.171875 -0.453125 1.171875 -0.953125 C 1.171875 -1.484375 1.59375 -2.3125 3.21875 -2.375 Z M 3.21875 -2.375 "/>
+</g>
+<g id="eqa-glyph-2-2">
+<path d="M 1.65625 -3.28125 L 1.65625 -4.359375 L 0.28125 -4.25 L 0.28125 -3.953125 C 0.96875 -3.953125 1.046875 -3.875 1.046875 -3.390625 L 1.046875 -0.75 C 1.046875 -0.3125 0.9375 -0.3125 0.28125 -0.3125 L 0.28125 0 C 0.65625 -0.015625 1.125 -0.03125 1.40625 -0.03125 C 1.796875 -0.03125 2.265625 -0.03125 2.65625 0 L 2.65625 -0.3125 L 2.453125 -0.3125 C 1.71875 -0.3125 1.703125 -0.421875 1.703125 -0.765625 L 1.703125 -2.296875 C 1.703125 -3.265625 2.109375 -4.140625 2.859375 -4.140625 C 2.9375 -4.140625 2.953125 -4.140625 2.96875 -4.140625 C 2.9375 -4.125 2.75 -4.015625 2.75 -3.75 C 2.75 -3.46875 2.953125 -3.328125 3.171875 -3.328125 C 3.34375 -3.328125 3.59375 -3.453125 3.59375 -3.765625 C 3.59375 -4.078125 3.28125 -4.359375 2.859375 -4.359375 C 2.140625 -4.359375 1.78125 -3.703125 1.65625 -3.28125 Z M 1.65625 -3.28125 "/>
+</g>
+<g id="eqa-glyph-2-3">
+<path d="M 2.1875 -1.703125 C 1.328125 -1.703125 1.328125 -2.6875 1.328125 -2.90625 C 1.328125 -3.1875 1.34375 -3.5 1.484375 -3.75 C 1.5625 -3.859375 1.796875 -4.140625 2.1875 -4.140625 C 3.046875 -4.140625 3.046875 -3.15625 3.046875 -2.921875 C 3.046875 -2.65625 3.046875 -2.34375 2.890625 -2.09375 C 2.8125 -1.96875 2.59375 -1.703125 2.1875 -1.703125 Z M 1.046875 -1.3125 C 1.046875 -1.359375 1.046875 -1.578125 1.21875 -1.78125 C 1.59375 -1.5 2 -1.46875 2.1875 -1.46875 C 3.109375 -1.46875 3.796875 -2.15625 3.796875 -2.90625 C 3.796875 -3.28125 3.640625 -3.640625 3.390625 -3.875 C 3.75 -4.203125 4.09375 -4.25 4.28125 -4.25 C 4.296875 -4.25 4.34375 -4.25 4.375 -4.25 C 4.265625 -4.203125 4.21875 -4.09375 4.21875 -3.984375 C 4.21875 -3.8125 4.34375 -3.6875 4.5 -3.6875 C 4.609375 -3.6875 4.796875 -3.765625 4.796875 -3.984375 C 4.796875 -4.15625 4.671875 -4.46875 4.28125 -4.46875 C 4.09375 -4.46875 3.65625 -4.421875 3.234375 -4.015625 C 2.828125 -4.328125 2.40625 -4.359375 2.1875 -4.359375 C 1.28125 -4.359375 0.59375 -3.6875 0.59375 -2.921875 C 0.59375 -2.484375 0.8125 -2.109375 1.0625 -1.90625 C 0.921875 -1.75 0.75 -1.4375 0.75 -1.09375 C 0.75 -0.78125 0.875 -0.40625 1.1875 -0.203125 C 0.59375 -0.046875 0.28125 0.390625 0.28125 0.78125 C 0.28125 1.484375 1.25 2.03125 2.453125 2.03125 C 3.625 2.03125 4.65625 1.53125 4.65625 0.765625 C 4.65625 0.421875 4.515625 -0.09375 4.015625 -0.359375 C 3.484375 -0.640625 2.90625 -0.640625 2.3125 -0.640625 C 2.0625 -0.640625 1.640625 -0.640625 1.5625 -0.65625 C 1.25 -0.6875 1.046875 -1 1.046875 -1.3125 Z M 2.46875 1.8125 C 1.46875 1.8125 0.796875 1.296875 0.796875 0.78125 C 0.796875 0.328125 1.171875 -0.046875 1.59375 -0.0625 L 2.1875 -0.0625 C 3.03125 -0.0625 4.140625 -0.0625 4.140625 0.78125 C 4.140625 1.3125 3.4375 1.8125 2.46875 1.8125 Z M 2.46875 1.8125 "/>
+</g>
+<g id="eqa-glyph-2-4">
+<path d="M 1.09375 -3.390625 L 1.09375 -0.75 C 1.09375 -0.3125 0.984375 -0.3125 0.3125 -0.3125 L 0.3125 0 C 0.65625 -0.015625 1.171875 -0.03125 1.4375 -0.03125 C 1.6875 -0.03125 2.203125 -0.015625 2.53125 0 L 2.53125 -0.3125 C 1.875 -0.3125 1.765625 -0.3125 1.765625 -0.75 L 1.765625 -2.5625 C 1.765625 -3.59375 2.46875 -4.140625 3.09375 -4.140625 C 3.71875 -4.140625 3.828125 -3.609375 3.828125 -3.046875 L 3.828125 -0.75 C 3.828125 -0.3125 3.71875 -0.3125 3.0625 -0.3125 L 3.0625 0 C 3.40625 -0.015625 3.90625 -0.03125 4.171875 -0.03125 C 4.4375 -0.03125 4.953125 -0.015625 5.28125 0 L 5.28125 -0.3125 C 4.625 -0.3125 4.515625 -0.3125 4.515625 -0.75 L 4.515625 -2.5625 C 4.515625 -3.59375 5.21875 -4.140625 5.84375 -4.140625 C 6.46875 -4.140625 6.578125 -3.609375 6.578125 -3.046875 L 6.578125 -0.75 C 6.578125 -0.3125 6.46875 -0.3125 5.8125 -0.3125 L 5.8125 0 C 6.15625 -0.015625 6.65625 -0.03125 6.921875 -0.03125 C 7.171875 -0.03125 7.6875 -0.015625 8.03125 0 L 8.03125 -0.3125 C 7.515625 -0.3125 7.265625 -0.3125 7.265625 -0.609375 L 7.265625 -2.484375 C 7.265625 -3.34375 7.265625 -3.640625 6.953125 -4 C 6.8125 -4.171875 6.484375 -4.359375 5.921875 -4.359375 C 5.078125 -4.359375 4.65625 -3.765625 4.484375 -3.390625 C 4.34375 -4.25 3.609375 -4.359375 3.171875 -4.359375 C 2.453125 -4.359375 1.984375 -3.9375 1.703125 -3.328125 L 1.703125 -4.359375 L 0.3125 -4.25 L 0.3125 -3.953125 C 1 -3.953125 1.09375 -3.875 1.09375 -3.390625 Z M 1.09375 -3.390625 "/>
+</g>
+<g id="eqa-glyph-2-5">
+<path d="M 2.828125 -2.328125 C 3.125 -2.703125 3.5 -3.1875 3.75 -3.4375 C 4.046875 -3.796875 4.453125 -3.9375 4.921875 -3.953125 L 4.921875 -4.25 C 4.65625 -4.234375 4.359375 -4.21875 4.109375 -4.21875 C 3.8125 -4.21875 3.28125 -4.25 3.15625 -4.25 L 3.15625 -3.953125 C 3.375 -3.9375 3.453125 -3.796875 3.453125 -3.640625 C 3.453125 -3.484375 3.34375 -3.359375 3.296875 -3.296875 L 2.6875 -2.53125 L 1.921875 -3.53125 C 1.828125 -3.625 1.828125 -3.640625 1.828125 -3.703125 C 1.828125 -3.84375 1.96875 -3.9375 2.171875 -3.953125 L 2.171875 -4.25 C 1.921875 -4.25 1.265625 -4.21875 1.109375 -4.21875 C 0.90625 -4.21875 0.4375 -4.234375 0.171875 -4.25 L 0.171875 -3.953125 C 0.859375 -3.953125 0.875 -3.9375 1.328125 -3.34375 L 2.3125 -2.078125 L 1.375 -0.90625 C 0.90625 -0.328125 0.328125 -0.3125 0.125 -0.3125 L 0.125 0 C 0.375 -0.015625 0.6875 -0.03125 0.9375 -0.03125 C 1.21875 -0.03125 1.640625 -0.015625 1.875 0 L 1.875 -0.3125 C 1.65625 -0.328125 1.59375 -0.46875 1.59375 -0.609375 C 1.59375 -0.828125 1.875 -1.15625 2.484375 -1.859375 L 3.234375 -0.875 C 3.3125 -0.765625 3.4375 -0.609375 3.4375 -0.546875 C 3.4375 -0.46875 3.34375 -0.3125 3.078125 -0.3125 L 3.078125 0 C 3.375 -0.015625 3.9375 -0.03125 4.140625 -0.03125 C 4.421875 -0.03125 4.796875 -0.015625 5.09375 0 L 5.09375 -0.3125 C 4.5625 -0.3125 4.390625 -0.328125 4.15625 -0.609375 Z M 2.828125 -2.328125 "/>
+</g>
+<g id="eqa-glyph-2-6">
+<path d="M 3.265625 2.375 C 3.265625 2.34375 3.265625 2.328125 3.09375 2.15625 C 1.859375 0.90625 1.546875 -0.953125 1.546875 -2.46875 C 1.546875 -4.1875 1.921875 -5.90625 3.140625 -7.140625 C 3.265625 -7.265625 3.265625 -7.28125 3.265625 -7.3125 C 3.265625 -7.375 3.234375 -7.40625 3.171875 -7.40625 C 3.078125 -7.40625 2.1875 -6.734375 1.59375 -5.484375 C 1.09375 -4.390625 0.984375 -3.296875 0.984375 -2.46875 C 0.984375 -1.703125 1.09375 -0.5 1.625 0.609375 C 2.21875 1.828125 3.078125 2.46875 3.171875 2.46875 C 3.234375 2.46875 3.265625 2.4375 3.265625 2.375 Z M 3.265625 2.375 "/>
+</g>
+<g id="eqa-glyph-2-7">
+<path d="M 2.859375 -2.46875 C 2.859375 -3.234375 2.75 -4.4375 2.203125 -5.546875 C 1.609375 -6.765625 0.765625 -7.40625 0.65625 -7.40625 C 0.609375 -7.40625 0.5625 -7.359375 0.5625 -7.3125 C 0.5625 -7.28125 0.5625 -7.265625 0.75 -7.078125 C 1.71875 -6.109375 2.28125 -4.53125 2.28125 -2.46875 C 2.28125 -0.78125 1.921875 0.953125 0.6875 2.203125 C 0.5625 2.328125 0.5625 2.34375 0.5625 2.375 C 0.5625 2.421875 0.609375 2.46875 0.65625 2.46875 C 0.765625 2.46875 1.65625 1.796875 2.234375 0.546875 C 2.734375 -0.546875 2.859375 -1.640625 2.859375 -2.46875 Z M 2.859375 -2.46875 "/>
+</g>
+<g id="eqa-glyph-2-8">
+<path d="M 4.03125 -2.265625 L 6.796875 -2.265625 C 6.9375 -2.265625 7.125 -2.265625 7.125 -2.46875 C 7.125 -2.671875 6.9375 -2.671875 6.796875 -2.671875 L 4.03125 -2.671875 L 4.03125 -5.4375 C 4.03125 -5.5625 4.03125 -5.75 3.84375 -5.75 C 3.640625 -5.75 3.640625 -5.5625 3.640625 -5.4375 L 3.640625 -2.671875 L 0.875 -2.671875 C 0.734375 -2.671875 0.546875 -2.671875 0.546875 -2.46875 C 0.546875 -2.265625 0.734375 -2.265625 0.875 -2.265625 L 3.640625 -2.265625 L 3.640625 0.5 C 3.640625 0.625 3.640625 0.8125 3.84375 0.8125 C 4.03125 0.8125 4.03125 0.625 4.03125 0.5 Z M 4.03125 -2.265625 "/>
+</g>
+<g id="eqa-glyph-2-9">
+<path d="M 2.90625 -6.3125 C 2.90625 -6.5625 2.90625 -6.578125 2.671875 -6.578125 C 2.0625 -5.9375 1.1875 -5.9375 0.875 -5.9375 L 0.875 -5.640625 C 1.078125 -5.640625 1.65625 -5.640625 2.171875 -5.890625 L 2.171875 -0.78125 C 2.171875 -0.421875 2.140625 -0.3125 1.25 -0.3125 L 0.9375 -0.3125 L 0.9375 0 C 1.28125 -0.03125 2.140625 -0.03125 2.53125 -0.03125 C 2.9375 -0.03125 3.796875 -0.03125 4.140625 0 L 4.140625 -0.3125 L 3.828125 -0.3125 C 2.9375 -0.3125 2.90625 -0.421875 2.90625 -0.78125 Z M 2.90625 -6.3125 "/>
+</g>
+<g id="eqa-glyph-3-0">
+<path d="M 2.921875 -2.640625 C 2.765625 -2.859375 2.53125 -3.046875 2.203125 -3.046875 C 1.3125 -3.046875 0.421875 -2.078125 0.421875 -1.078125 C 0.421875 -0.40625 0.875 0.0625 1.46875 0.0625 C 1.84375 0.0625 2.171875 -0.140625 2.4375 -0.421875 C 2.578125 0 2.984375 0.0625 3.15625 0.0625 C 3.40625 0.0625 3.578125 -0.078125 3.703125 -0.296875 C 3.859375 -0.5625 3.9375 -0.953125 3.9375 -0.984375 C 3.9375 -1.078125 3.859375 -1.078125 3.828125 -1.078125 C 3.734375 -1.078125 3.734375 -1.046875 3.6875 -0.859375 C 3.59375 -0.53125 3.46875 -0.125 3.171875 -0.125 C 3 -0.125 2.953125 -0.28125 2.953125 -0.46875 C 2.953125 -0.578125 3 -0.828125 3.046875 -1.015625 C 3.09375 -1.1875 3.171875 -1.484375 3.203125 -1.625 L 3.34375 -2.15625 C 3.390625 -2.328125 3.46875 -2.65625 3.46875 -2.6875 C 3.46875 -2.84375 3.34375 -2.921875 3.234375 -2.921875 C 3.109375 -2.921875 2.953125 -2.828125 2.921875 -2.640625 Z M 2.46875 -0.859375 C 2.421875 -0.671875 2.265625 -0.53125 2.125 -0.40625 C 2.0625 -0.34375 1.78125 -0.125 1.484375 -0.125 C 1.234375 -0.125 0.984375 -0.296875 0.984375 -0.796875 C 0.984375 -1.15625 1.1875 -1.921875 1.34375 -2.203125 C 1.65625 -2.75 2.015625 -2.859375 2.203125 -2.859375 C 2.6875 -2.859375 2.8125 -2.328125 2.8125 -2.25 C 2.8125 -2.21875 2.796875 -2.171875 2.796875 -2.15625 Z M 2.46875 -0.859375 "/>
+</g>
+<g id="eqa-glyph-4-0">
+<path d="M 2.234375 17.375 L 4.46875 17.375 L 4.46875 16.90625 L 2.703125 16.90625 L 2.703125 0.0625 L 4.46875 0.0625 L 4.46875 -0.390625 L 2.234375 -0.390625 Z M 2.234375 17.375 "/>
+</g>
+<g id="eqa-glyph-4-1">
+<path d="M 4.546875 -0.90625 C 4.546875 -1.140625 4.546875 -1.1875 4.40625 -1.1875 C 3.796875 -1.1875 2.828125 -1.28125 1.9375 -1.703125 C 0.875 -2.234375 0.46875 -2.859375 0.21875 -3.25 C 0.1875 -3.296875 0.125 -3.296875 0 -3.296875 C -0.234375 -3.296875 -0.234375 -3.28125 -0.234375 -3.046875 L -0.234375 -2.890625 C 1.109375 -0.46875 3.328125 0 4.328125 0 C 4.546875 0 4.546875 -0.015625 4.546875 -0.28125 Z M 4.546875 -0.90625 "/>
+</g>
+<g id="eqa-glyph-4-2">
+<path d="M 4.6875 1.703125 C 3.34375 -0.71875 1.109375 -1.1875 0.109375 -1.1875 C -0.09375 -1.1875 -0.09375 -1.171875 -0.09375 -0.90625 L -0.09375 -0.28125 C -0.09375 -0.046875 -0.09375 0 0.046875 0 C 0.640625 0.015625 1.625 0.09375 2.515625 0.515625 C 3.578125 1.0625 3.984375 1.671875 4.21875 2.0625 C 4.25 2.109375 4.3125 2.109375 4.4375 2.109375 C 4.671875 2.109375 4.6875 2.109375 4.6875 1.859375 Z M 4.6875 1.703125 "/>
+</g>
+<g id="eqa-glyph-4-3">
+<path d="M 4.546875 -0.90625 C 4.546875 -1.171875 4.546875 -1.1875 4.328125 -1.1875 C 3.328125 -1.1875 1.109375 -0.71875 -0.234375 1.703125 L -0.234375 1.859375 C -0.234375 2.109375 -0.234375 2.109375 0 2.109375 C 0.1875 2.109375 0.203125 2.109375 0.25 2.03125 C 1.0625 0.734375 2.421875 0.046875 4.421875 0 C 4.546875 0 4.546875 -0.0625 4.546875 -0.28125 Z M 4.546875 -0.90625 "/>
+</g>
+<g id="eqa-glyph-4-4">
+<path d="M 4.6875 -3.046875 C 4.6875 -3.28125 4.671875 -3.296875 4.4375 -3.296875 C 4.25 -3.296875 4.25 -3.28125 4.203125 -3.21875 C 3.390625 -1.921875 2.03125 -1.21875 0.015625 -1.1875 C -0.09375 -1.1875 -0.09375 -1.109375 -0.09375 -0.90625 L -0.09375 -0.28125 C -0.09375 -0.015625 -0.09375 0 0.109375 0 C 1.109375 0 3.34375 -0.46875 4.6875 -2.890625 Z M 4.6875 -3.046875 "/>
+</g>
+<g id="eqa-glyph-4-5">
+<path d="M 4.1875 11.453125 C 4.5 11.453125 4.5 11.4375 4.609375 11.25 L 10 -0.015625 C 10.078125 -0.140625 10.078125 -0.171875 10.078125 -0.203125 C 10.078125 -0.3125 10 -0.390625 9.875 -0.390625 C 9.75 -0.390625 9.703125 -0.3125 9.65625 -0.203125 L 4.5625 10.421875 L 2.453125 5.53125 L 1.09375 6.59375 L 1.234375 6.75 L 1.9375 6.21875 Z M 4.1875 11.453125 "/>
+</g>
+<g id="eqa-glyph-4-6">
+<path d="M 1.953125 16.90625 L 0.171875 16.90625 L 0.171875 17.375 L 2.421875 17.375 L 2.421875 -0.390625 L 0.171875 -0.390625 L 0.171875 0.0625 L 1.953125 0.0625 Z M 1.953125 16.90625 "/>
+</g>
+<g id="eqa-glyph-5-0">
+<path d="M 3.234375 -0.828125 C 3.234375 -0.859375 3.21875 -0.921875 3.109375 -0.921875 C 3.03125 -0.921875 3.015625 -0.890625 2.984375 -0.8125 C 2.78125 -0.25 2.25 -0.15625 2 -0.15625 C 1.671875 -0.15625 1.375 -0.296875 1.15625 -0.5625 C 0.90625 -0.890625 0.890625 -1.3125 0.890625 -1.578125 L 3.03125 -1.578125 C 3.1875 -1.578125 3.234375 -1.578125 3.234375 -1.734375 C 3.234375 -2.328125 2.890625 -3.078125 1.859375 -3.078125 C 0.953125 -3.078125 0.265625 -2.359375 0.265625 -1.515625 C 0.265625 -0.640625 1.03125 0.0625 1.953125 0.0625 C 2.890625 0.0625 3.234375 -0.671875 3.234375 -0.828125 Z M 2.75 -1.75 L 0.90625 -1.75 C 0.984375 -2.734375 1.609375 -2.890625 1.859375 -2.890625 C 2.71875 -2.890625 2.734375 -1.921875 2.75 -1.75 Z M 2.75 -1.75 "/>
+</g>
+<g id="eqa-glyph-5-1">
+<path d="M 3.921875 -2.734375 L 3.921875 -2.984375 C 3.75 -2.96875 3.578125 -2.953125 3.390625 -2.953125 C 3.21875 -2.953125 2.953125 -2.953125 2.765625 -2.984375 L 2.765625 -2.734375 C 3.0625 -2.71875 3.0625 -2.484375 3.0625 -2.46875 C 3.0625 -2.4375 3.046875 -2.359375 3 -2.265625 L 2.21875 -0.5625 L 1.375 -2.4375 C 1.375 -2.4375 1.328125 -2.515625 1.328125 -2.5625 C 1.328125 -2.734375 1.5625 -2.734375 1.671875 -2.734375 L 1.671875 -2.984375 C 1.671875 -2.984375 1.171875 -2.953125 0.890625 -2.953125 C 0.6875 -2.953125 0.421875 -2.953125 0.21875 -2.984375 L 0.21875 -2.734375 C 0.59375 -2.734375 0.671875 -2.71875 0.78125 -2.484375 L 1.875 -0.078125 C 1.90625 0 1.953125 0.0625 2.0625 0.0625 C 2.203125 0.0625 2.21875 0 2.265625 -0.0625 L 3.28125 -2.296875 C 3.46875 -2.71875 3.8125 -2.734375 3.921875 -2.734375 Z M 3.921875 -2.734375 "/>
+</g>
+<g id="eqa-glyph-5-2">
+<path d="M 1.890625 0 L 1.890625 -0.25 C 1.484375 -0.25 1.421875 -0.25 1.421875 -0.53125 L 1.421875 -3.046875 L 0.40625 -2.96875 L 0.40625 -2.71875 C 0.84375 -2.71875 0.90625 -2.671875 0.90625 -2.34375 L 0.90625 -0.546875 C 0.90625 -0.25 0.828125 -0.25 0.390625 -0.25 L 0.390625 0 C 0.390625 0 0.890625 -0.03125 1.15625 -0.03125 C 1.40625 -0.03125 1.65625 -0.015625 1.890625 0 Z M 1.515625 -4.15625 C 1.515625 -4.375 1.34375 -4.5625 1.125 -4.5625 C 0.890625 -4.5625 0.71875 -4.359375 0.71875 -4.171875 C 0.71875 -3.9375 0.890625 -3.765625 1.125 -3.765625 C 1.359375 -3.765625 1.515625 -3.953125 1.515625 -4.15625 Z M 1.515625 -4.15625 "/>
+</g>
+<g id="eqa-glyph-5-3">
+<path d="M 4.015625 0 L 4.015625 -0.25 C 3.546875 -0.25 3.5 -0.296875 3.5 -0.640625 L 3.5 -4.796875 L 2.453125 -4.71875 L 2.453125 -4.46875 C 2.921875 -4.46875 2.984375 -4.421875 2.984375 -4.078125 L 2.984375 -2.65625 C 2.71875 -2.90625 2.390625 -3.046875 2.015625 -3.046875 C 1.09375 -3.046875 0.3125 -2.359375 0.3125 -1.484375 C 0.3125 -0.625 1.046875 0.0625 1.921875 0.0625 C 2.5 0.0625 2.828125 -0.234375 2.953125 -0.359375 L 2.953125 0.0625 Z M 2.953125 -0.71875 C 2.765625 -0.40625 2.421875 -0.125 1.96875 -0.125 C 1.578125 -0.125 1.3125 -0.359375 1.171875 -0.546875 C 1.03125 -0.765625 0.953125 -1.03125 0.953125 -1.484375 C 0.953125 -1.640625 0.953125 -2.15625 1.234375 -2.484375 C 1.5 -2.796875 1.84375 -2.859375 2.046875 -2.859375 C 2.375 -2.859375 2.671875 -2.703125 2.859375 -2.453125 C 2.953125 -2.34375 2.953125 -2.328125 2.953125 -2.203125 Z M 2.953125 -0.71875 "/>
+</g>
+<g id="eqa-glyph-5-4">
+<path d="M 4.078125 0 L 4.078125 -0.25 C 3.625 -0.25 3.5625 -0.25 3.5625 -0.546875 L 3.5625 -2.09375 C 3.5625 -2.6875 3.265625 -3.046875 2.515625 -3.046875 C 1.953125 -3.046875 1.59375 -2.734375 1.390625 -2.375 L 1.390625 -3.046875 L 0.375 -2.96875 L 0.375 -2.71875 C 0.828125 -2.71875 0.890625 -2.671875 0.890625 -2.328125 L 0.890625 -0.546875 C 0.890625 -0.25 0.828125 -0.25 0.375 -0.25 L 0.375 0 C 0.375 0 0.875 -0.03125 1.15625 -0.03125 C 1.421875 -0.03125 1.890625 0 1.953125 0 L 1.953125 -0.25 C 1.5 -0.25 1.4375 -0.25 1.4375 -0.546875 L 1.4375 -1.78125 C 1.4375 -2.515625 2.015625 -2.859375 2.46875 -2.859375 C 2.953125 -2.859375 3.015625 -2.46875 3.015625 -2.125 L 3.015625 -0.546875 C 3.015625 -0.25 2.9375 -0.25 2.5 -0.25 L 2.5 0 C 2.5 0 2.984375 -0.03125 3.28125 -0.03125 C 3.53125 -0.03125 4.015625 0 4.078125 0 Z M 4.078125 0 "/>
+</g>
+<g id="eqa-glyph-5-5">
+<path d="M 3.234375 -0.828125 C 3.234375 -0.90625 3.140625 -0.90625 3.109375 -0.90625 C 3.03125 -0.90625 3.015625 -0.890625 2.984375 -0.796875 C 2.828125 -0.359375 2.46875 -0.15625 2.046875 -0.15625 C 1.5625 -0.15625 0.953125 -0.5 0.953125 -1.5 C 0.953125 -2.375 1.375 -2.859375 2.015625 -2.859375 C 2.109375 -2.859375 2.4375 -2.859375 2.6875 -2.75 C 2.5625 -2.703125 2.5 -2.59375 2.5 -2.453125 C 2.5 -2.265625 2.625 -2.125 2.8125 -2.125 C 3 -2.125 3.15625 -2.25 3.15625 -2.46875 C 3.15625 -3.078125 2.1875 -3.078125 2 -3.078125 C 0.953125 -3.078125 0.3125 -2.28125 0.3125 -1.484375 C 0.3125 -0.625 1.0625 0.0625 1.96875 0.0625 C 2.984375 0.0625 3.234375 -0.75 3.234375 -0.828125 Z M 3.234375 -0.828125 "/>
+</g>
+<g id="eqa-glyph-5-6">
+<path d="M 3.96875 0 L 3.96875 -0.25 C 3.5 -0.25 3.453125 -0.296875 3.28125 -0.46875 L 2.34375 -1.546875 L 2.28125 -1.609375 C 2.28125 -1.640625 2.734375 -2.125 2.796875 -2.1875 C 3.046875 -2.453125 3.28125 -2.71875 3.828125 -2.734375 L 3.828125 -2.984375 C 3.640625 -2.96875 3.4375 -2.953125 3.25 -2.953125 C 3.046875 -2.953125 2.78125 -2.953125 2.5625 -2.984375 L 2.5625 -2.734375 C 2.6875 -2.703125 2.703125 -2.625 2.703125 -2.5625 C 2.703125 -2.5625 2.703125 -2.453125 2.609375 -2.328125 L 2.125 -1.78125 L 1.546875 -2.4375 C 1.484375 -2.515625 1.46875 -2.5625 1.46875 -2.578125 C 1.46875 -2.6875 1.5625 -2.734375 1.65625 -2.734375 L 1.65625 -2.984375 C 1.40625 -2.953125 1.140625 -2.953125 0.890625 -2.953125 C 0.671875 -2.953125 0.421875 -2.953125 0.21875 -2.984375 L 0.21875 -2.734375 C 0.53125 -2.734375 0.71875 -2.734375 0.890625 -2.515625 L 1.75 -1.53125 L 1.8125 -1.453125 C 1.8125 -1.4375 1.296875 -0.875 1.21875 -0.796875 C 0.96875 -0.515625 0.734375 -0.265625 0.171875 -0.25 L 0.171875 0 C 0.390625 -0.015625 0.53125 -0.03125 0.75 -0.03125 C 0.953125 -0.03125 1.234375 -0.015625 1.4375 0 L 1.4375 -0.25 C 1.359375 -0.265625 1.3125 -0.3125 1.3125 -0.40625 C 1.3125 -0.53125 1.375 -0.625 1.484375 -0.75 L 1.96875 -1.28125 L 2.578125 -0.59375 C 2.703125 -0.453125 2.703125 -0.4375 2.703125 -0.390625 C 2.703125 -0.25 2.546875 -0.25 2.515625 -0.25 L 2.515625 0 C 2.578125 0 3.078125 -0.03125 3.296875 -0.03125 C 3.515625 -0.03125 3.75 -0.015625 3.96875 0 Z M 3.96875 0 "/>
+</g>
+<g id="eqa-glyph-5-7">
+<path d="M 4.03125 -1.484375 C 4.03125 -2.34375 3.328125 -3.046875 2.453125 -3.046875 C 2.0625 -3.046875 1.65625 -2.90625 1.375 -2.625 L 1.375 -3.046875 L 0.34375 -2.96875 L 0.34375 -2.71875 C 0.828125 -2.71875 0.859375 -2.6875 0.859375 -2.390625 L 0.859375 0.796875 C 0.859375 1.09375 0.78125 1.09375 0.34375 1.09375 L 0.34375 1.34375 C 0.34375 1.34375 0.828125 1.3125 1.125 1.3125 C 1.375 1.3125 1.859375 1.328125 1.921875 1.34375 L 1.921875 1.09375 C 1.46875 1.09375 1.40625 1.09375 1.40625 0.796875 L 1.40625 -0.328125 C 1.4375 -0.296875 1.765625 0.0625 2.34375 0.0625 C 3.25 0.0625 4.03125 -0.609375 4.03125 -1.484375 Z M 3.40625 -1.484375 C 3.40625 -0.703125 2.890625 -0.125 2.296875 -0.125 C 1.6875 -0.125 1.421875 -0.65625 1.40625 -0.703125 L 1.40625 -2.296875 C 1.609375 -2.640625 2.015625 -2.828125 2.375 -2.828125 C 2.953125 -2.828125 3.40625 -2.21875 3.40625 -1.484375 Z M 3.40625 -1.484375 "/>
+</g>
+<g id="eqa-glyph-5-8">
+<path d="M 1.9375 0 L 1.9375 -0.25 C 1.484375 -0.25 1.421875 -0.25 1.421875 -0.546875 L 1.421875 -4.796875 L 0.390625 -4.71875 L 0.390625 -4.46875 C 0.84375 -4.46875 0.90625 -4.421875 0.90625 -4.078125 L 0.90625 -0.546875 C 0.90625 -0.25 0.828125 -0.25 0.390625 -0.25 L 0.390625 0 C 0.390625 0 0.890625 -0.03125 1.15625 -0.03125 C 1.421875 -0.03125 1.671875 -0.015625 1.9375 0 Z M 1.9375 0 "/>
+</g>
+<g id="eqa-glyph-5-9">
+<path d="M 3.65625 -1.46875 C 3.65625 -2.328125 2.921875 -3.078125 1.96875 -3.078125 C 1.015625 -3.078125 0.265625 -2.328125 0.265625 -1.46875 C 0.265625 -0.609375 1.03125 0.0625 1.96875 0.0625 C 2.890625 0.0625 3.65625 -0.609375 3.65625 -1.46875 Z M 3.03125 -1.53125 C 3.03125 -1.203125 3 -0.828125 2.796875 -0.546875 C 2.625 -0.296875 2.296875 -0.15625 1.96875 -0.15625 C 1.703125 -0.15625 1.328125 -0.234375 1.109375 -0.578125 C 0.921875 -0.859375 0.890625 -1.21875 0.890625 -1.53125 C 0.890625 -1.828125 0.90625 -2.234375 1.140625 -2.53125 C 1.3125 -2.734375 1.609375 -2.890625 1.96875 -2.890625 C 2.375 -2.890625 2.65625 -2.6875 2.8125 -2.484375 C 3 -2.203125 3.03125 -1.859375 3.03125 -1.53125 Z M 3.03125 -1.53125 "/>
+</g>
+<g id="eqa-glyph-5-10">
+<path d="M 2.8125 -2.609375 C 2.8125 -2.84375 2.59375 -3.046875 2.265625 -3.046875 C 1.921875 -3.046875 1.546875 -2.828125 1.328125 -2.3125 L 1.328125 -3.046875 L 0.34375 -2.96875 L 0.34375 -2.71875 C 0.796875 -2.71875 0.859375 -2.671875 0.859375 -2.328125 L 0.859375 -0.546875 C 0.859375 -0.25 0.78125 -0.25 0.34375 -0.25 L 0.34375 0 C 0.375 0 0.84375 -0.03125 1.125 -0.03125 L 2.03125 0 L 2.03125 -0.25 L 1.890625 -0.25 C 1.375 -0.25 1.375 -0.328125 1.375 -0.5625 L 1.375 -1.578125 C 1.375 -2.15625 1.640625 -2.859375 2.296875 -2.859375 C 2.234375 -2.796875 2.1875 -2.71875 2.1875 -2.609375 C 2.1875 -2.375 2.359375 -2.28125 2.5 -2.28125 C 2.65625 -2.28125 2.8125 -2.390625 2.8125 -2.609375 Z M 2.8125 -2.609375 "/>
+</g>
+<g id="eqa-glyph-5-11">
+<path d="M 3.75 -0.625 L 3.75 -1 L 3.515625 -1 L 3.515625 -0.625 C 3.515625 -0.5625 3.515625 -0.234375 3.265625 -0.234375 C 3.015625 -0.234375 3.015625 -0.546875 3.015625 -0.640625 L 3.015625 -1.84375 C 3.015625 -2.21875 3.015625 -2.484375 2.6875 -2.734375 C 2.40625 -2.96875 2.078125 -3.078125 1.671875 -3.078125 C 1.015625 -3.078125 0.546875 -2.828125 0.546875 -2.40625 C 0.546875 -2.1875 0.703125 -2.078125 0.890625 -2.078125 C 1.078125 -2.078125 1.203125 -2.203125 1.203125 -2.390625 C 1.203125 -2.515625 1.15625 -2.65625 0.96875 -2.71875 C 1.21875 -2.890625 1.609375 -2.890625 1.65625 -2.890625 C 2.046875 -2.890625 2.46875 -2.625 2.46875 -2.046875 L 2.46875 -1.84375 C 2.078125 -1.828125 1.625 -1.796875 1.125 -1.609375 C 0.5 -1.390625 0.3125 -1.015625 0.3125 -0.703125 C 0.3125 -0.109375 1.03125 0.0625 1.515625 0.0625 C 2.078125 0.0625 2.390625 -0.234375 2.546875 -0.515625 C 2.5625 -0.234375 2.75 0.03125 3.078125 0.03125 C 3.078125 0.03125 3.75 0.03125 3.75 -0.625 Z M 2.46875 -0.96875 C 2.46875 -0.3125 1.890625 -0.125 1.578125 -0.125 C 1.21875 -0.125 0.890625 -0.359375 0.890625 -0.703125 C 0.890625 -1.078125 1.21875 -1.609375 2.46875 -1.65625 Z M 2.46875 -0.96875 "/>
+</g>
+<g id="eqa-glyph-5-12">
+<path d="M 2.59375 -0.875 L 2.59375 -1.25 L 2.359375 -1.25 L 2.359375 -0.875 C 2.359375 -0.40625 2.140625 -0.15625 1.859375 -0.15625 C 1.390625 -0.15625 1.390625 -0.734375 1.390625 -0.859375 L 1.390625 -2.734375 L 2.46875 -2.734375 L 2.46875 -2.984375 L 1.390625 -2.984375 L 1.390625 -4.25 L 1.15625 -4.25 C 1.140625 -3.625 0.859375 -2.9375 0.203125 -2.921875 L 0.203125 -2.734375 L 0.84375 -2.734375 L 0.84375 -0.859375 C 0.84375 -0.09375 1.421875 0.0625 1.8125 0.0625 C 2.265625 0.0625 2.59375 -0.328125 2.59375 -0.875 Z M 2.59375 -0.875 "/>
+</g>
+<g id="eqa-glyph-5-13">
+<path d="M 4.03125 -1.484375 C 4.03125 -2.328125 3.328125 -3.046875 2.421875 -3.046875 C 2 -3.046875 1.625 -2.875 1.375 -2.625 L 1.375 -4.796875 L 0.34375 -4.71875 L 0.34375 -4.46875 C 0.8125 -4.46875 0.859375 -4.40625 0.859375 -4.0625 L 0.859375 0 L 1.09375 0 L 1.328125 -0.421875 C 1.59375 -0.078125 1.96875 0.0625 2.34375 0.0625 C 3.25 0.0625 4.03125 -0.609375 4.03125 -1.484375 Z M 3.40625 -1.5 C 3.40625 -1.34375 3.40625 -0.828125 3.125 -0.5 C 2.84375 -0.1875 2.5 -0.125 2.3125 -0.125 C 1.75 -0.125 1.484375 -0.5625 1.40625 -0.703125 L 1.40625 -2.3125 C 1.59375 -2.625 1.96875 -2.859375 2.375 -2.859375 C 2.765625 -2.859375 3.046875 -2.625 3.1875 -2.421875 C 3.328125 -2.21875 3.40625 -1.953125 3.40625 -1.5 Z M 3.40625 -1.5 "/>
+</g>
+<g id="eqa-glyph-5-14">
+<path d="M 4.078125 0 L 4.078125 -0.25 C 3.609375 -0.25 3.5625 -0.296875 3.5625 -0.640625 L 3.5625 -3.046875 L 2.5 -2.96875 L 2.5 -2.71875 C 2.953125 -2.71875 3.015625 -2.671875 3.015625 -2.328125 L 3.015625 -1.15625 C 3.015625 -0.546875 2.625 -0.125 2.09375 -0.125 C 1.46875 -0.125 1.4375 -0.421875 1.4375 -0.78125 L 1.4375 -3.046875 L 0.375 -2.96875 L 0.375 -2.71875 C 0.890625 -2.71875 0.890625 -2.703125 0.890625 -2.078125 L 0.890625 -1.046875 C 0.890625 -0.578125 0.890625 0.0625 2.046875 0.0625 C 2.203125 0.0625 2.703125 0.0625 3.03125 -0.515625 L 3.03125 0.0625 Z M 4.078125 0 "/>
+</g>
+<g id="eqa-glyph-5-15">
+<path d="M 2.8125 -0.90625 C 2.8125 -1.171875 2.6875 -1.375 2.515625 -1.546875 C 2.25 -1.78125 1.9375 -1.84375 1.6875 -1.875 C 1.140625 -1.96875 0.6875 -2.0625 0.6875 -2.421875 C 0.6875 -2.640625 0.875 -2.921875 1.53125 -2.921875 C 2.328125 -2.921875 2.375 -2.359375 2.375 -2.15625 C 2.390625 -2.078125 2.46875 -2.078125 2.5 -2.078125 C 2.625 -2.078125 2.625 -2.125 2.625 -2.265625 L 2.625 -2.90625 C 2.625 -3.015625 2.625 -3.078125 2.515625 -3.078125 C 2.484375 -3.078125 2.46875 -3.078125 2.375 -3 C 2.375 -2.984375 2.296875 -2.921875 2.265625 -2.890625 C 2.046875 -3.03125 1.78125 -3.078125 1.53125 -3.078125 C 0.546875 -3.078125 0.3125 -2.5625 0.3125 -2.21875 C 0.3125 -2 0.40625 -1.8125 0.578125 -1.671875 C 0.828125 -1.453125 1.09375 -1.40625 1.53125 -1.328125 C 1.875 -1.265625 2.4375 -1.171875 2.4375 -0.71875 C 2.4375 -0.4375 2.25 -0.125 1.578125 -0.125 C 0.921875 -0.125 0.671875 -0.5625 0.546875 -1.03125 C 0.53125 -1.125 0.53125 -1.140625 0.421875 -1.140625 C 0.3125 -1.140625 0.3125 -1.09375 0.3125 -0.953125 L 0.3125 -0.109375 C 0.3125 0 0.3125 0.0625 0.40625 0.0625 C 0.46875 0.0625 0.59375 -0.078125 0.734375 -0.234375 C 1.046875 0.0625 1.421875 0.0625 1.578125 0.0625 C 2.484375 0.0625 2.8125 -0.421875 2.8125 -0.90625 Z M 2.8125 -0.90625 "/>
+</g>
+</g>
+</defs>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-0" x="2.543133" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-1-0" x="7.760066" y="13.984938"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-0" x="15.038774" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-1" x="25.441239" y="18.059985"/>
+<use xlink:href="#eqa-glyph-2-2" x="30.375994" y="18.059985"/>
+<use xlink:href="#eqa-glyph-2-3" x="34.234973" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-4" x="40.95611" y="18.059985"/>
+<use xlink:href="#eqa-glyph-2-1" x="49.177413" y="18.059985"/>
+<use xlink:href="#eqa-glyph-2-5" x="54.112168" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-3-0" x="48.017228" y="23.981688"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-0" x="60.986787" y="7.10473"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-1" x="70.03374" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-6" x="77.836126" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-2" x="81.674279" y="18.059985"/>
+<use xlink:href="#eqa-glyph-0-3" x="86.29321" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-0" x="90.665404" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-7" x="95.903958" y="18.059985"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-1" x="70.03373" y="24.672529"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 2.604715 47.68948 L 8.629787 47.68948 " transform="matrix(0.990652, 0, 0, -0.990652, 71.896196, 71.325718)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-2" x="80.446604" y="24.672519"/>
+<use xlink:href="#eqa-glyph-4-3" x="84.887884" y="24.672519"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 17.596418 47.68948 L 23.625432 47.68948 " transform="matrix(0.990652, 0, 0, -0.990652, 71.896196, 71.325718)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-4" x="95.300769" y="24.672519"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-5-0" x="70.321009" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-1" x="73.830607" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-2" x="77.975802" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-3" x="80.207298" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-0" x="84.566661" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-4" x="88.076259" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-5" x="92.435622" y="34.072887"/>
+<use xlink:href="#eqa-glyph-5-0" x="95.945221" y="34.072887"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-8" x="104.128441" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-4" x="116.191098" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-5" x="122.093065" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-6" x="129.814199" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-2" x="133.652353" y="18.059975"/>
+<use xlink:href="#eqa-glyph-0-3" x="138.271284" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-0" x="142.643477" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-7" x="147.882031" y="18.059975"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-5" x="162.915019" y="2.762176"/>
+</g>
+<path fill="none" stroke-width="0.398484" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 101.840952 69.408127 L 123.350614 69.408127 " transform="matrix(0.990652, 0, 0, -0.990652, 71.896196, 71.325718)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-6" x="172.78455" y="11.20066"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-6" x="181.79046" y="11.20066"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-2" x="185.628613" y="11.20066"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-7" x="190.254949" y="11.20066"/>
+</g>
+<path fill="none" stroke-width="0.398484" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 83.434517 56.257857 L 131.792812 56.257857 " transform="matrix(0.990652, 0, 0, -0.990652, 71.896196, 71.325718)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-9" x="154.549407" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-8" x="161.675194" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-6" x="171.546829" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-6" x="180.552739" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-2" x="184.390892" y="24.829974"/>
+<use xlink:href="#eqa-glyph-0-3" x="189.009823" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-0-0" x="193.382017" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-2-7" x="198.62057" y="24.829974"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-1" x="116.191088" y="31.442527"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 49.196497 40.856071 L 84.369034 40.856071 " transform="matrix(0.990652, 0, 0, -0.990652, 71.896196, 71.325718)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-2" x="155.475736" y="31.442527"/>
+<use xlink:href="#eqa-glyph-4-3" x="159.917016" y="31.442527"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 93.335665 40.856071 L 128.508202 40.856071 " transform="matrix(0.990652, 0, 0, -0.990652, 71.896196, 71.325718)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-4" x="199.201697" y="31.442527"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-5-0" x="129.121704" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-6" x="132.631302" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-7" x="136.776497" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-8" x="141.13586" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-9" x="143.367356" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-10" x="147.298382" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-11" x="150.379644" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-12" x="154.31067" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-2" x="157.391931" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-9" x="159.623428" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-4" x="163.554454" y="40.842895"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-5-13" x="170.57365" y="40.842895"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-5-9" x="175.147181" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-4" x="179.078208" y="40.842895"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-5-14" x="183.230311" y="40.842895"/>
+<use xlink:href="#eqa-glyph-5-15" x="187.589674" y="40.842895"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqa-glyph-4-6" x="208.029359" y="7.10473"/>
+</g>
+</svg>
+</div>
+<p>until it reaches a position it hasn't seen yet. The network evaluates that position once, and its value is passed back up the path, flipping sign at each step because the players alternate. <i>N</i>(<i>s</i>,<i>a</i>) counts how often a move has been tried, and <i>Q</i>(<i>s</i>,<i>a</i>) is the <em>average</em> value of every simulation that went through it. The bonus term is large for moves the network likes but the search has rarely tried, and it shrinks as a move gets checked. Early on the search follows the network's intuition; as evidence piles up, it follows the evidence.</p>
+
+<h3>Most visits, not the highest average</h3>
+<p>After the search, AlphaZero plays the <strong>most-visited</strong> move, not the move with the highest average value. That sounds like a detail, but it matters. A move's average is built from network evaluations, and with only a few visits it is noisy. If you pick the largest of several noisy averages, you will tend to pick the move whose estimate happens to be too high. A visit count can't be inflated that way: the search keeps sending simulations to a move only while its average <em>holds up</em> under repeated checking. Here is a real search by Oroletto that shows both effects.</p>
+</section>
+
+<div class="widget" id="mcts">
+  <div class="w-head">
+    <div class="w-title">Inside one search</div>
+    <div class="w-sub">Black to move. Real numbers from Oroletto's search on this position.</div>
+  </div>
+  <div class="w-grid">
+    <div class="board-col"><div class="board-frame" id="mctsBoard"></div></div>
+    <div class="side">
+      <div class="controls">
+        <span class="lab">Simulations</span>
+        <div class="seg" id="budgetSeg" role="group" aria-label="Search budget">
+          <button data-b="64" aria-pressed="true">64</button>
+          <button data-b="800" aria-pressed="false">800</button>
+          <button data-b="3200" aria-pressed="false">3,200</button>
+        </div>
+      </div>
+      <div class="badges"><span class="badge g">● played: most visited</span><span class="badge a">highest average Q</span></div>
+      <div class="mrows" id="mctsRows"></div>
+      <div class="story" id="mctsStory" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+<h3>Why averaging makes the search forgiving</h3>
+<p>The minimax bot backs up the <em>best</em> value at every branch. If a single far-off position is misjudged as too good, that one error gets selected and carried straight to the top. AlphaZero's search backs up <em>averages</em> instead, so a position is judged by many network evaluations rather than by its single most optimistic one, and independent mistakes partly cancel out. As simulations concentrate on the best replies, those averages drift towards what minimax would compute, so nothing is lost in the limit. With a small budget and an imperfect network, the averaging is what keeps the search stable, and it is why a few dozen simulations are enough to outplay a four-move minimax search.</p>
+
+<h3>Learning from its own searches</h3>
+<p>Here is the clever part. Every position AlphaZero meets in self-play is saved with two training targets: the <strong>visit distribution</strong> of its search (<i>π</i>, how the simulations were spread over the moves) and the <strong>final result</strong> of the game (<i>z</i>). The network is trained to predict both:</p>
+<div class="math"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="eq" role="img" aria-label="L equals z minus v squared (predict the result) minus pi transpose log p (imitate the search) plus c times the squared norm of theta" style="max-width:520px" viewBox="0 0 209.65 31.45">
+<defs>
+<g>
+<g id="eqb-glyph-0-0">
+<path d="M 1.765625 -0.90625 C 2.296875 -1.734375 2.453125 -2.359375 2.59375 -2.875 C 2.921875 -4.234375 3.296875 -5.40625 3.90625 -6.078125 C 4.03125 -6.21875 4.109375 -6.296875 4.421875 -6.296875 C 5.09375 -6.296875 5.109375 -5.625 5.109375 -5.484375 C 5.109375 -5.3125 5.0625 -5.171875 5.0625 -5.125 C 5.0625 -5.0625 5.125 -5.0625 5.140625 -5.0625 C 5.296875 -5.0625 5.5625 -5.15625 5.796875 -5.34375 C 5.96875 -5.46875 6.0625 -5.578125 6.0625 -5.96875 C 6.0625 -6.5 5.796875 -6.90625 5.234375 -6.90625 C 4.921875 -6.90625 4.0625 -6.828125 3.109375 -5.859375 C 2.328125 -5.0625 1.859375 -3.296875 1.671875 -2.5625 C 1.5 -1.875 1.421875 -1.578125 1.125 -0.984375 C 1.0625 -0.875 0.796875 -0.4375 0.671875 -0.3125 C 0.40625 -0.0625 0.296875 0.109375 0.296875 0.15625 C 0.296875 0.171875 0.328125 0.21875 0.390625 0.21875 C 0.4375 0.21875 0.640625 0.171875 0.890625 0.015625 C 1.0625 -0.09375 1.078125 -0.109375 1.296875 -0.34375 C 1.796875 -0.328125 2.140625 -0.25 2.75 -0.0625 C 3.25 0.0625 3.75 0.21875 4.25 0.21875 C 5.046875 0.21875 5.84375 -0.375 6.15625 -0.8125 C 6.359375 -1.078125 6.421875 -1.328125 6.421875 -1.359375 C 6.421875 -1.421875 6.359375 -1.421875 6.34375 -1.421875 C 6.1875 -1.421875 5.953125 -1.3125 5.796875 -1.1875 C 5.53125 -1.03125 5.5 -0.96875 5.453125 -0.796875 C 5.390625 -0.640625 5.34375 -0.5625 5.296875 -0.515625 C 5.21875 -0.390625 5.21875 -0.390625 5.0625 -0.390625 C 4.59375 -0.390625 4.109375 -0.53125 3.453125 -0.71875 C 3.1875 -0.796875 2.640625 -0.953125 2.15625 -0.953125 C 2.03125 -0.953125 1.890625 -0.9375 1.765625 -0.90625 Z M 1.765625 -0.90625 "/>
+</g>
+<g id="eqb-glyph-0-1">
+<path d="M 6.453125 -2.25 C 6.625 -2.25 6.796875 -2.25 6.796875 -2.453125 C 6.796875 -2.640625 6.625 -2.640625 6.453125 -2.640625 L 1.15625 -2.640625 C 0.984375 -2.640625 0.8125 -2.640625 0.8125 -2.453125 C 0.8125 -2.25 0.984375 -2.25 1.15625 -2.25 Z M 6.453125 -2.25 "/>
+</g>
+<g id="eqb-glyph-0-2">
+<path d="M 1.6875 -7.015625 C 1.6875 -7.171875 1.6875 -7.34375 1.484375 -7.34375 C 1.296875 -7.34375 1.296875 -7.125 1.296875 -6.984375 L 1.296875 2.09375 C 1.296875 2.25 1.296875 2.453125 1.484375 2.453125 C 1.6875 2.453125 1.6875 2.265625 1.6875 2.109375 Z M 3.59375 -6.984375 C 3.59375 -7.140625 3.59375 -7.34375 3.40625 -7.34375 C 3.203125 -7.34375 3.203125 -7.171875 3.203125 -7.015625 L 3.203125 2.109375 C 3.203125 2.265625 3.203125 2.453125 3.40625 2.453125 C 3.59375 2.453125 3.59375 2.234375 3.59375 2.09375 Z M 3.59375 -6.984375 "/>
+</g>
+<g id="eqb-glyph-1-0">
+<path d="M 6.734375 -3.203125 C 6.875 -3.203125 7.0625 -3.203125 7.0625 -3.40625 C 7.0625 -3.59375 6.875 -3.59375 6.734375 -3.59375 L 0.875 -3.59375 C 0.734375 -3.59375 0.546875 -3.59375 0.546875 -3.40625 C 0.546875 -3.203125 0.734375 -3.203125 0.875 -3.203125 Z M 6.734375 -1.296875 C 6.875 -1.296875 7.0625 -1.296875 7.0625 -1.5 C 7.0625 -1.6875 6.875 -1.6875 6.734375 -1.6875 L 0.875 -1.6875 C 0.734375 -1.6875 0.546875 -1.6875 0.546875 -1.5 C 0.546875 -1.296875 0.734375 -1.296875 0.875 -1.296875 Z M 6.734375 -1.296875 "/>
+</g>
+<g id="eqb-glyph-1-1">
+<path d="M 3.25 2.34375 C 3.25 2.328125 3.25 2.296875 3.078125 2.140625 C 1.859375 0.90625 1.53125 -0.953125 1.53125 -2.453125 C 1.53125 -4.15625 1.90625 -5.859375 3.109375 -7.078125 C 3.25 -7.203125 3.25 -7.21875 3.25 -7.25 C 3.25 -7.3125 3.203125 -7.34375 3.140625 -7.34375 C 3.046875 -7.34375 2.171875 -6.6875 1.59375 -5.4375 C 1.09375 -4.359375 0.96875 -3.265625 0.96875 -2.453125 C 0.96875 -1.6875 1.078125 -0.5 1.609375 0.609375 C 2.203125 1.8125 3.046875 2.453125 3.140625 2.453125 C 3.203125 2.453125 3.25 2.421875 3.25 2.34375 Z M 3.25 2.34375 "/>
+</g>
+<g id="eqb-glyph-1-2">
+<path d="M 2.828125 -2.453125 C 2.828125 -3.21875 2.71875 -4.40625 2.1875 -5.5 C 1.59375 -6.703125 0.75 -7.34375 0.65625 -7.34375 C 0.59375 -7.34375 0.5625 -7.3125 0.5625 -7.25 C 0.5625 -7.21875 0.5625 -7.203125 0.75 -7.03125 C 1.703125 -6.046875 2.265625 -4.5 2.265625 -2.453125 C 2.265625 -0.78125 1.90625 0.953125 0.6875 2.1875 C 0.5625 2.296875 0.5625 2.328125 0.5625 2.34375 C 0.5625 2.40625 0.59375 2.453125 0.65625 2.453125 C 0.75 2.453125 1.640625 1.78125 2.21875 0.53125 C 2.71875 -0.53125 2.828125 -1.625 2.828125 -2.453125 Z M 2.828125 -2.453125 "/>
+</g>
+<g id="eqb-glyph-1-3">
+<path d="M 1.734375 -6.796875 L 0.328125 -6.6875 L 0.328125 -6.390625 C 1.015625 -6.390625 1.09375 -6.3125 1.09375 -5.84375 L 1.09375 -0.75 C 1.09375 -0.296875 0.984375 -0.296875 0.328125 -0.296875 L 0.328125 0 C 0.640625 -0.015625 1.171875 -0.03125 1.40625 -0.03125 C 1.65625 -0.03125 2.140625 -0.015625 2.5 0 L 2.5 -0.296875 C 1.84375 -0.296875 1.734375 -0.296875 1.734375 -0.75 Z M 1.734375 -6.796875 "/>
+</g>
+<g id="eqb-glyph-1-4">
+<path d="M 4.609375 -2.09375 C 4.609375 -3.34375 3.640625 -4.390625 2.453125 -4.390625 C 1.21875 -4.390625 0.28125 -3.328125 0.28125 -2.09375 C 0.28125 -0.828125 1.296875 0.109375 2.4375 0.109375 C 3.625 0.109375 4.609375 -0.859375 4.609375 -2.09375 Z M 2.453125 -0.140625 C 2.03125 -0.140625 1.59375 -0.34375 1.328125 -0.796875 C 1.09375 -1.21875 1.09375 -1.828125 1.09375 -2.171875 C 1.09375 -2.5625 1.09375 -3.09375 1.328125 -3.515625 C 1.59375 -3.96875 2.046875 -4.171875 2.4375 -4.171875 C 2.875 -4.171875 3.296875 -3.953125 3.546875 -3.53125 C 3.796875 -3.109375 3.796875 -2.546875 3.796875 -2.171875 C 3.796875 -1.828125 3.796875 -1.296875 3.578125 -0.859375 C 3.375 -0.421875 2.9375 -0.140625 2.453125 -0.140625 Z M 2.453125 -0.140625 "/>
+</g>
+<g id="eqb-glyph-1-5">
+<path d="M 2.171875 -1.6875 C 1.328125 -1.6875 1.328125 -2.671875 1.328125 -2.890625 C 1.328125 -3.15625 1.328125 -3.46875 1.484375 -3.71875 C 1.5625 -3.828125 1.78125 -4.109375 2.171875 -4.109375 C 3.03125 -4.109375 3.03125 -3.125 3.03125 -2.90625 C 3.03125 -2.640625 3.015625 -2.328125 2.875 -2.078125 C 2.796875 -1.953125 2.5625 -1.6875 2.171875 -1.6875 Z M 1.03125 -1.296875 C 1.03125 -1.34375 1.03125 -1.5625 1.203125 -1.765625 C 1.59375 -1.484375 1.984375 -1.453125 2.171875 -1.453125 C 3.09375 -1.453125 3.765625 -2.140625 3.765625 -2.890625 C 3.765625 -3.25 3.609375 -3.609375 3.359375 -3.84375 C 3.71875 -4.171875 4.0625 -4.21875 4.234375 -4.21875 C 4.265625 -4.21875 4.3125 -4.21875 4.34375 -4.21875 C 4.234375 -4.171875 4.1875 -4.0625 4.1875 -3.953125 C 4.1875 -3.78125 4.3125 -3.65625 4.46875 -3.65625 C 4.5625 -3.65625 4.75 -3.734375 4.75 -3.953125 C 4.75 -4.125 4.640625 -4.4375 4.25 -4.4375 C 4.0625 -4.4375 3.625 -4.375 3.21875 -3.984375 C 2.796875 -4.296875 2.390625 -4.328125 2.171875 -4.328125 C 1.265625 -4.328125 0.59375 -3.65625 0.59375 -2.90625 C 0.59375 -2.46875 0.796875 -2.09375 1.046875 -1.890625 C 0.921875 -1.75 0.75 -1.421875 0.75 -1.078125 C 0.75 -0.78125 0.875 -0.40625 1.171875 -0.203125 C 0.59375 -0.046875 0.28125 0.375 0.28125 0.78125 C 0.28125 1.484375 1.25 2.015625 2.4375 2.015625 C 3.59375 2.015625 4.609375 1.515625 4.609375 0.75 C 4.609375 0.40625 4.484375 -0.09375 3.984375 -0.359375 C 3.453125 -0.640625 2.890625 -0.640625 2.296875 -0.640625 C 2.046875 -0.640625 1.625 -0.640625 1.5625 -0.640625 C 1.25 -0.6875 1.03125 -0.984375 1.03125 -1.296875 Z M 2.453125 1.796875 C 1.453125 1.796875 0.78125 1.296875 0.78125 0.78125 C 0.78125 0.328125 1.15625 -0.046875 1.59375 -0.0625 L 2.171875 -0.0625 C 3 -0.0625 4.109375 -0.0625 4.109375 0.78125 C 4.109375 1.296875 3.40625 1.796875 2.453125 1.796875 Z M 2.453125 1.796875 "/>
+</g>
+<g id="eqb-glyph-1-6">
+<path d="M 4 -2.25 L 6.734375 -2.25 C 6.875 -2.25 7.0625 -2.25 7.0625 -2.453125 C 7.0625 -2.640625 6.875 -2.640625 6.734375 -2.640625 L 4 -2.640625 L 4 -5.390625 C 4 -5.53125 4 -5.71875 3.8125 -5.71875 C 3.609375 -5.71875 3.609375 -5.53125 3.609375 -5.390625 L 3.609375 -2.640625 L 0.875 -2.640625 C 0.734375 -2.640625 0.546875 -2.640625 0.546875 -2.453125 C 0.546875 -2.25 0.734375 -2.25 0.875 -2.25 L 3.609375 -2.25 L 3.609375 0.484375 C 3.609375 0.625 3.609375 0.8125 3.8125 0.8125 C 4 0.8125 4 0.625 4 0.484375 Z M 4 -2.25 "/>
+</g>
+<g id="eqb-glyph-2-0">
+<path d="M 1.296875 -0.8125 C 1.828125 -1.375 2.109375 -1.625 2.46875 -1.9375 C 2.46875 -1.9375 3.078125 -2.453125 3.421875 -2.8125 C 4.359375 -3.71875 4.578125 -4.1875 4.578125 -4.234375 C 4.578125 -4.328125 4.484375 -4.328125 4.46875 -4.328125 C 4.40625 -4.328125 4.375 -4.3125 4.328125 -4.21875 C 4.03125 -3.75 3.828125 -3.59375 3.578125 -3.59375 C 3.34375 -3.59375 3.234375 -3.75 3.09375 -3.90625 C 2.90625 -4.140625 2.734375 -4.328125 2.40625 -4.328125 C 1.671875 -4.328125 1.21875 -3.421875 1.21875 -3.21875 C 1.21875 -3.171875 1.25 -3.109375 1.34375 -3.109375 C 1.4375 -3.109375 1.453125 -3.15625 1.46875 -3.21875 C 1.65625 -3.65625 2.21875 -3.671875 2.296875 -3.671875 C 2.515625 -3.671875 2.6875 -3.609375 2.921875 -3.53125 C 3.3125 -3.375 3.421875 -3.375 3.671875 -3.375 C 3.328125 -2.953125 2.5 -2.25 2.3125 -2.09375 L 1.4375 -1.28125 C 0.765625 -0.625 0.421875 -0.0625 0.421875 0.015625 C 0.421875 0.109375 0.515625 0.109375 0.53125 0.109375 C 0.625 0.109375 0.640625 0.09375 0.703125 -0.015625 C 0.921875 -0.359375 1.21875 -0.625 1.53125 -0.625 C 1.75 -0.625 1.859375 -0.53125 2.09375 -0.25 C 2.265625 -0.046875 2.4375 0.109375 2.71875 0.109375 C 3.6875 0.109375 4.265625 -1.140625 4.265625 -1.40625 C 4.265625 -1.453125 4.21875 -1.5 4.140625 -1.5 C 4.0625 -1.5 4.03125 -1.4375 4 -1.375 C 3.78125 -0.734375 3.15625 -0.546875 2.828125 -0.546875 C 2.640625 -0.546875 2.453125 -0.609375 2.25 -0.671875 C 1.921875 -0.796875 1.765625 -0.84375 1.5625 -0.84375 C 1.546875 -0.84375 1.390625 -0.84375 1.296875 -0.8125 Z M 1.296875 -0.8125 "/>
+</g>
+<g id="eqb-glyph-2-1">
+<path d="M 4.578125 -3.640625 C 4.578125 -4.171875 4.328125 -4.328125 4.15625 -4.328125 C 3.90625 -4.328125 3.671875 -4.078125 3.671875 -3.859375 C 3.671875 -3.734375 3.71875 -3.671875 3.828125 -3.5625 C 4.03125 -3.375 4.15625 -3.109375 4.15625 -2.765625 C 4.15625 -2.34375 3.5625 -0.109375 2.421875 -0.109375 C 1.921875 -0.109375 1.6875 -0.453125 1.6875 -0.953125 C 1.6875 -1.515625 1.953125 -2.21875 2.265625 -3.03125 C 2.328125 -3.203125 2.375 -3.34375 2.375 -3.53125 C 2.375 -3.96875 2.0625 -4.328125 1.578125 -4.328125 C 0.65625 -4.328125 0.28125 -2.90625 0.28125 -2.828125 C 0.28125 -2.71875 0.375 -2.71875 0.40625 -2.71875 C 0.5 -2.71875 0.515625 -2.75 0.5625 -2.90625 C 0.84375 -3.890625 1.265625 -4.109375 1.546875 -4.109375 C 1.625 -4.109375 1.796875 -4.109375 1.796875 -3.796875 C 1.796875 -3.5625 1.6875 -3.296875 1.625 -3.109375 C 1.1875 -1.984375 1.0625 -1.53125 1.0625 -1.109375 C 1.0625 -0.046875 1.9375 0.109375 2.375 0.109375 C 4.03125 0.109375 4.578125 -3.140625 4.578125 -3.640625 Z M 4.578125 -3.640625 "/>
+</g>
+<g id="eqb-glyph-2-2">
+<path d="M 2.59375 -3.65625 L 3.703125 -3.65625 C 3.375 -2.203125 3.296875 -1.78125 3.296875 -1.125 C 3.296875 -0.984375 3.296875 -0.71875 3.375 -0.375 C 3.46875 0.046875 3.578125 0.109375 3.71875 0.109375 C 3.921875 0.109375 4.125 -0.0625 4.125 -0.265625 C 4.125 -0.328125 4.125 -0.34375 4.0625 -0.484375 C 3.78125 -1.1875 3.78125 -1.828125 3.78125 -2.09375 C 3.78125 -2.609375 3.84375 -3.140625 3.953125 -3.65625 L 5.078125 -3.65625 C 5.203125 -3.65625 5.5625 -3.65625 5.5625 -3.984375 C 5.5625 -4.21875 5.34375 -4.21875 5.15625 -4.21875 L 1.875 -4.21875 C 1.671875 -4.21875 1.296875 -4.21875 0.859375 -3.765625 C 0.515625 -3.375 0.265625 -2.921875 0.265625 -2.875 C 0.265625 -2.875 0.265625 -2.78125 0.375 -2.78125 C 0.453125 -2.78125 0.484375 -2.828125 0.53125 -2.90625 C 1.015625 -3.65625 1.59375 -3.65625 1.78125 -3.65625 L 2.34375 -3.65625 C 2.03125 -2.46875 1.5 -1.28125 1.09375 -0.390625 C 1.015625 -0.25 1.015625 -0.21875 1.015625 -0.15625 C 1.015625 0.03125 1.171875 0.109375 1.296875 0.109375 C 1.59375 0.109375 1.671875 -0.171875 1.78125 -0.53125 C 1.921875 -0.984375 1.921875 -1 2.046875 -1.484375 Z M 2.59375 -3.65625 "/>
+</g>
+<g id="eqb-glyph-2-3">
+<path d="M 0.4375 1.1875 C 0.359375 1.53125 0.34375 1.59375 -0.09375 1.59375 C -0.203125 1.59375 -0.3125 1.59375 -0.3125 1.78125 C -0.3125 1.859375 -0.265625 1.90625 -0.1875 1.90625 C 0.078125 1.90625 0.359375 1.875 0.640625 1.875 C 0.953125 1.875 1.296875 1.90625 1.609375 1.90625 C 1.65625 1.90625 1.78125 1.90625 1.78125 1.703125 C 1.78125 1.59375 1.6875 1.59375 1.546875 1.59375 C 1.0625 1.59375 1.0625 1.53125 1.0625 1.4375 C 1.0625 1.328125 1.46875 -0.28125 1.53125 -0.515625 C 1.671875 -0.234375 1.9375 0.109375 2.4375 0.109375 C 3.578125 0.109375 4.796875 -1.328125 4.796875 -2.765625 C 4.796875 -3.6875 4.234375 -4.328125 3.5 -4.328125 C 3 -4.328125 2.53125 -3.984375 2.21875 -3.59375 C 2.109375 -4.125 1.6875 -4.328125 1.328125 -4.328125 C 0.875 -4.328125 0.703125 -3.953125 0.609375 -3.765625 C 0.4375 -3.4375 0.296875 -2.84375 0.296875 -2.828125 C 0.296875 -2.71875 0.40625 -2.71875 0.421875 -2.71875 C 0.515625 -2.71875 0.53125 -2.734375 0.59375 -2.953125 C 0.75 -3.640625 0.953125 -4.109375 1.296875 -4.109375 C 1.46875 -4.109375 1.609375 -4.03125 1.609375 -3.65625 C 1.609375 -3.4375 1.578125 -3.328125 1.53125 -3.171875 Z M 2.171875 -3.0625 C 2.234375 -3.328125 2.5 -3.59375 2.671875 -3.75 C 3.015625 -4.046875 3.296875 -4.109375 3.46875 -4.109375 C 3.859375 -4.109375 4.09375 -3.765625 4.09375 -3.1875 C 4.09375 -2.609375 3.765625 -1.484375 3.59375 -1.109375 C 3.265625 -0.4375 2.796875 -0.109375 2.421875 -0.109375 C 1.78125 -0.109375 1.65625 -0.921875 1.65625 -0.984375 C 1.65625 -1 1.65625 -1.015625 1.6875 -1.140625 Z M 2.171875 -3.0625 "/>
+</g>
+<g id="eqb-glyph-2-4">
+<path d="M 3.875 -3.71875 C 3.71875 -3.71875 3.578125 -3.71875 3.453125 -3.578125 C 3.296875 -3.4375 3.265625 -3.265625 3.265625 -3.203125 C 3.265625 -2.96875 3.453125 -2.859375 3.640625 -2.859375 C 3.921875 -2.859375 4.1875 -3.09375 4.1875 -3.484375 C 4.1875 -3.96875 3.71875 -4.328125 3.03125 -4.328125 C 1.703125 -4.328125 0.40625 -2.921875 0.40625 -1.546875 C 0.40625 -0.671875 0.96875 0.109375 1.984375 0.109375 C 3.390625 0.109375 4.21875 -0.9375 4.21875 -1.046875 C 4.21875 -1.109375 4.15625 -1.171875 4.09375 -1.171875 C 4.046875 -1.171875 4.03125 -1.15625 3.96875 -1.078125 C 3.1875 -0.109375 2.125 -0.109375 2.015625 -0.109375 C 1.390625 -0.109375 1.125 -0.59375 1.125 -1.171875 C 1.125 -1.578125 1.328125 -2.53125 1.65625 -3.140625 C 1.953125 -3.6875 2.5 -4.109375 3.03125 -4.109375 C 3.375 -4.109375 3.75 -3.984375 3.875 -3.71875 Z M 3.875 -3.71875 "/>
+</g>
+<g id="eqb-glyph-2-5">
+<path d="M 4.453125 -4.890625 C 4.453125 -5.546875 4.28125 -6.90625 3.28125 -6.90625 C 1.921875 -6.90625 0.40625 -4.140625 0.40625 -1.90625 C 0.40625 -0.984375 0.703125 0.109375 1.59375 0.109375 C 2.96875 0.109375 4.453125 -2.703125 4.453125 -4.890625 Z M 1.453125 -3.5625 C 1.609375 -4.1875 1.8125 -4.96875 2.203125 -5.65625 C 2.46875 -6.140625 2.828125 -6.6875 3.265625 -6.6875 C 3.75 -6.6875 3.8125 -6.0625 3.8125 -5.5 C 3.8125 -5.03125 3.734375 -4.53125 3.5 -3.5625 Z M 3.40625 -3.25 C 3.296875 -2.796875 3.09375 -1.953125 2.71875 -1.25 C 2.375 -0.59375 2.015625 -0.109375 1.59375 -0.109375 C 1.265625 -0.109375 1.0625 -0.390625 1.0625 -1.296875 C 1.0625 -1.71875 1.109375 -2.28125 1.375 -3.25 Z M 3.40625 -3.25 "/>
+</g>
+<g id="eqb-glyph-3-0">
+<path d="M 3.46875 -1.25 L 3.234375 -1.25 C 3.203125 -1.09375 3.140625 -0.6875 3.046875 -0.625 C 3 -0.578125 2.46875 -0.578125 2.375 -0.578125 L 1.109375 -0.578125 C 1.828125 -1.21875 2.078125 -1.40625 2.484375 -1.734375 C 2.984375 -2.140625 3.46875 -2.5625 3.46875 -3.21875 C 3.46875 -4.046875 2.734375 -4.546875 1.859375 -4.546875 C 1.015625 -4.546875 0.4375 -3.953125 0.4375 -3.328125 C 0.4375 -2.984375 0.734375 -2.9375 0.796875 -2.9375 C 0.953125 -2.9375 1.15625 -3.0625 1.15625 -3.3125 C 1.15625 -3.421875 1.109375 -3.671875 0.75 -3.671875 C 0.96875 -4.15625 1.4375 -4.3125 1.75 -4.3125 C 2.4375 -4.3125 2.796875 -3.765625 2.796875 -3.21875 C 2.796875 -2.625 2.375 -2.140625 2.15625 -1.90625 L 0.5 -0.265625 C 0.4375 -0.203125 0.4375 -0.1875 0.4375 0 L 3.265625 0 Z M 3.46875 -1.25 "/>
+</g>
+<g id="eqb-glyph-4-0">
+<path d="M 4.5 -0.90625 C 4.5 -1.125 4.5 -1.171875 4.375 -1.171875 C 3.765625 -1.1875 2.796875 -1.265625 1.921875 -1.6875 C 0.859375 -2.21875 0.453125 -2.84375 0.21875 -3.21875 C 0.1875 -3.265625 0.125 -3.265625 0 -3.265625 C -0.21875 -3.265625 -0.234375 -3.265625 -0.234375 -3.015625 L -0.234375 -2.859375 C 1.09375 -0.453125 3.296875 0 4.296875 0 C 4.5 0 4.5 -0.015625 4.5 -0.28125 Z M 4.5 -0.90625 "/>
+</g>
+<g id="eqb-glyph-4-1">
+<path d="M 4.640625 1.6875 C 3.3125 -0.71875 1.109375 -1.171875 0.109375 -1.171875 C -0.09375 -1.171875 -0.09375 -1.171875 -0.09375 -0.90625 L -0.09375 -0.28125 C -0.09375 -0.046875 -0.09375 0 0.046875 0 C 0.640625 0.015625 1.609375 0.09375 2.484375 0.515625 C 3.546875 1.046875 3.953125 1.671875 4.1875 2.046875 C 4.21875 2.09375 4.28125 2.09375 4.40625 2.09375 C 4.640625 2.09375 4.640625 2.09375 4.640625 1.84375 Z M 4.640625 1.6875 "/>
+</g>
+<g id="eqb-glyph-4-2">
+<path d="M 4.5 -0.90625 C 4.5 -1.171875 4.5 -1.171875 4.296875 -1.171875 C 3.296875 -1.171875 1.09375 -0.703125 -0.234375 1.6875 L -0.234375 1.84375 C -0.234375 2.09375 -0.21875 2.09375 0 2.09375 C 0.1875 2.09375 0.203125 2.09375 0.25 2.015625 C 1.046875 0.734375 2.40625 0.046875 4.390625 0 C 4.5 0 4.5 -0.0625 4.5 -0.28125 Z M 4.5 -0.90625 "/>
+</g>
+<g id="eqb-glyph-4-3">
+<path d="M 4.640625 -3.015625 C 4.640625 -3.265625 4.640625 -3.265625 4.40625 -3.265625 C 4.21875 -3.265625 4.21875 -3.265625 4.15625 -3.1875 C 3.359375 -1.90625 2.015625 -1.21875 0.015625 -1.171875 C -0.09375 -1.171875 -0.09375 -1.109375 -0.09375 -0.90625 L -0.09375 -0.28125 C -0.09375 -0.015625 -0.09375 0 0.109375 0 C 1.109375 0 3.3125 -0.46875 4.640625 -2.859375 Z M 4.640625 -3.015625 "/>
+</g>
+<g id="eqb-glyph-5-0">
+<path d="M 4 -1.484375 C 4 -2.328125 3.3125 -3.03125 2.4375 -3.03125 C 2.046875 -3.03125 1.640625 -2.875 1.359375 -2.609375 L 1.359375 -3.03125 L 0.34375 -2.953125 L 0.34375 -2.703125 C 0.8125 -2.703125 0.84375 -2.671875 0.84375 -2.375 L 0.84375 0.78125 C 0.84375 1.078125 0.78125 1.078125 0.34375 1.078125 L 0.34375 1.328125 C 0.34375 1.328125 0.828125 1.296875 1.125 1.296875 C 1.375 1.296875 1.84375 1.328125 1.90625 1.328125 L 1.90625 1.078125 C 1.46875 1.078125 1.390625 1.078125 1.390625 0.78125 L 1.390625 -0.328125 C 1.421875 -0.296875 1.75 0.0625 2.328125 0.0625 C 3.234375 0.0625 4 -0.609375 4 -1.484375 Z M 3.375 -1.484375 C 3.375 -0.703125 2.875 -0.125 2.28125 -0.125 C 1.6875 -0.125 1.40625 -0.65625 1.390625 -0.6875 L 1.390625 -2.28125 C 1.59375 -2.625 2 -2.8125 2.359375 -2.8125 C 2.9375 -2.8125 3.375 -2.203125 3.375 -1.484375 Z M 3.375 -1.484375 "/>
+</g>
+<g id="eqb-glyph-5-1">
+<path d="M 2.796875 -2.59375 C 2.796875 -2.8125 2.578125 -3.03125 2.25 -3.03125 C 1.90625 -3.03125 1.53125 -2.8125 1.328125 -2.296875 L 1.3125 -2.296875 L 1.3125 -3.03125 L 0.34375 -2.953125 L 0.34375 -2.703125 C 0.796875 -2.703125 0.84375 -2.65625 0.84375 -2.3125 L 0.84375 -0.546875 C 0.84375 -0.25 0.78125 -0.25 0.34375 -0.25 L 0.34375 0 C 0.375 0 0.84375 -0.03125 1.125 -0.03125 L 2.015625 0 L 2.015625 -0.25 L 1.875 -0.25 C 1.359375 -0.25 1.359375 -0.328125 1.359375 -0.5625 L 1.359375 -1.5625 C 1.359375 -2.140625 1.625 -2.828125 2.28125 -2.828125 C 2.21875 -2.78125 2.171875 -2.703125 2.171875 -2.59375 C 2.171875 -2.359375 2.34375 -2.265625 2.46875 -2.265625 C 2.640625 -2.265625 2.796875 -2.375 2.796875 -2.59375 Z M 2.796875 -2.59375 "/>
+</g>
+<g id="eqb-glyph-5-2">
+<path d="M 3.203125 -0.828125 C 3.203125 -0.84375 3.203125 -0.921875 3.09375 -0.921875 C 3 -0.921875 2.984375 -0.875 2.96875 -0.8125 C 2.75 -0.25 2.234375 -0.15625 1.984375 -0.15625 C 1.671875 -0.15625 1.359375 -0.296875 1.15625 -0.5625 C 0.90625 -0.875 0.890625 -1.296875 0.890625 -1.5625 L 3.015625 -1.5625 C 3.15625 -1.5625 3.203125 -1.5625 3.203125 -1.71875 C 3.203125 -2.3125 2.875 -3.0625 1.859375 -3.0625 C 0.953125 -3.0625 0.265625 -2.34375 0.265625 -1.5 C 0.265625 -0.625 1.03125 0.0625 1.9375 0.0625 C 2.875 0.0625 3.203125 -0.671875 3.203125 -0.828125 Z M 2.734375 -1.75 L 0.90625 -1.75 C 0.96875 -2.703125 1.59375 -2.875 1.859375 -2.875 C 2.703125 -2.875 2.71875 -1.90625 2.734375 -1.75 Z M 2.734375 -1.75 "/>
+</g>
+<g id="eqb-glyph-5-3">
+<path d="M 3.984375 0 L 3.984375 -0.25 C 3.53125 -0.25 3.46875 -0.296875 3.46875 -0.625 L 3.46875 -4.765625 L 2.4375 -4.6875 L 2.4375 -4.4375 C 2.90625 -4.4375 2.953125 -4.390625 2.953125 -4.046875 L 2.953125 -2.640625 C 2.703125 -2.875 2.375 -3.03125 2 -3.03125 C 1.078125 -3.03125 0.3125 -2.34375 0.3125 -1.46875 C 0.3125 -0.625 1.046875 0.0625 1.90625 0.0625 C 2.46875 0.0625 2.8125 -0.234375 2.921875 -0.359375 L 2.921875 0.0625 Z M 2.921875 -0.71875 C 2.75 -0.390625 2.40625 -0.125 1.953125 -0.125 C 1.578125 -0.125 1.296875 -0.34375 1.15625 -0.546875 C 1.015625 -0.75 0.9375 -1.03125 0.9375 -1.46875 C 0.9375 -1.625 0.9375 -2.140625 1.21875 -2.46875 C 1.5 -2.765625 1.828125 -2.828125 2.03125 -2.828125 C 2.359375 -2.828125 2.65625 -2.6875 2.84375 -2.4375 C 2.921875 -2.328125 2.921875 -2.3125 2.921875 -2.1875 Z M 2.921875 -0.71875 "/>
+</g>
+<g id="eqb-glyph-5-4">
+<path d="M 1.875 0 L 1.875 -0.25 C 1.484375 -0.25 1.40625 -0.25 1.40625 -0.53125 L 1.40625 -3.03125 L 0.40625 -2.953125 L 0.40625 -2.703125 C 0.84375 -2.703125 0.90625 -2.65625 0.90625 -2.328125 L 0.90625 -0.546875 C 0.90625 -0.25 0.828125 -0.25 0.390625 -0.25 L 0.390625 0 C 0.390625 0 0.875 -0.03125 1.15625 -0.03125 C 1.390625 -0.03125 1.640625 -0.015625 1.875 0 Z M 1.5 -4.125 C 1.5 -4.34375 1.328125 -4.53125 1.109375 -4.53125 C 0.875 -4.53125 0.71875 -4.328125 0.71875 -4.140625 C 0.71875 -3.921875 0.890625 -3.734375 1.109375 -3.734375 C 1.34375 -3.734375 1.5 -3.9375 1.5 -4.125 Z M 1.5 -4.125 "/>
+</g>
+<g id="eqb-glyph-5-5">
+<path d="M 3.203125 -0.828125 C 3.203125 -0.90625 3.125 -0.90625 3.09375 -0.90625 C 3 -0.90625 3 -0.890625 2.96875 -0.78125 C 2.8125 -0.359375 2.453125 -0.15625 2.03125 -0.15625 C 1.5625 -0.15625 0.9375 -0.5 0.9375 -1.484375 C 0.9375 -2.359375 1.359375 -2.84375 2 -2.84375 C 2.09375 -2.84375 2.421875 -2.84375 2.671875 -2.734375 C 2.546875 -2.6875 2.46875 -2.578125 2.46875 -2.4375 C 2.46875 -2.25 2.609375 -2.109375 2.796875 -2.109375 C 2.984375 -2.109375 3.125 -2.234375 3.125 -2.453125 C 3.125 -3.0625 2.171875 -3.0625 1.984375 -3.0625 C 0.953125 -3.0625 0.3125 -2.265625 0.3125 -1.484375 C 0.3125 -0.625 1.046875 0.0625 1.953125 0.0625 C 2.96875 0.0625 3.203125 -0.734375 3.203125 -0.828125 Z M 3.203125 -0.828125 "/>
+</g>
+<g id="eqb-glyph-5-6">
+<path d="M 2.578125 -0.859375 L 2.578125 -1.234375 L 2.34375 -1.234375 L 2.34375 -0.875 C 2.34375 -0.40625 2.125 -0.15625 1.859375 -0.15625 C 1.375 -0.15625 1.375 -0.734375 1.375 -0.84375 L 1.375 -2.703125 L 2.453125 -2.703125 L 2.453125 -2.953125 L 1.375 -2.953125 L 1.375 -4.21875 L 1.140625 -4.21875 C 1.140625 -3.59375 0.859375 -2.921875 0.203125 -2.90625 L 0.203125 -2.703125 L 0.84375 -2.703125 L 0.84375 -0.859375 C 0.84375 -0.09375 1.40625 0.0625 1.796875 0.0625 C 2.25 0.0625 2.578125 -0.328125 2.578125 -0.859375 Z M 2.578125 -0.859375 "/>
+</g>
+<g id="eqb-glyph-5-7">
+<path d="M 4.046875 0 L 4.046875 -0.25 C 3.59375 -0.25 3.53125 -0.25 3.53125 -0.546875 L 3.53125 -2.078125 C 3.53125 -2.671875 3.234375 -3.03125 2.5 -3.03125 C 1.890625 -3.03125 1.5625 -2.65625 1.40625 -2.40625 L 1.40625 -4.765625 L 0.375 -4.6875 L 0.375 -4.4375 C 0.828125 -4.4375 0.890625 -4.390625 0.890625 -4.046875 L 0.890625 -0.546875 C 0.890625 -0.25 0.8125 -0.25 0.375 -0.25 L 0.375 0 C 0.375 0 0.859375 -0.03125 1.15625 -0.03125 C 1.40625 -0.03125 1.875 0 1.9375 0 L 1.9375 -0.25 C 1.5 -0.25 1.421875 -0.25 1.421875 -0.546875 L 1.421875 -1.78125 C 1.421875 -2.5 2 -2.828125 2.453125 -2.828125 C 2.921875 -2.828125 2.984375 -2.453125 2.984375 -2.109375 L 2.984375 -0.546875 C 2.984375 -0.25 2.921875 -0.25 2.46875 -0.25 L 2.46875 0 C 2.46875 0 2.96875 -0.03125 3.265625 -0.03125 C 3.515625 -0.03125 3.984375 0 4.046875 0 Z M 4.046875 0 "/>
+</g>
+<g id="eqb-glyph-5-8">
+<path d="M 2.796875 -0.90625 C 2.796875 -1.15625 2.671875 -1.359375 2.5 -1.53125 C 2.234375 -1.765625 1.921875 -1.828125 1.6875 -1.859375 C 1.125 -1.96875 0.6875 -2.046875 0.6875 -2.40625 C 0.6875 -2.625 0.875 -2.890625 1.515625 -2.890625 C 2.3125 -2.890625 2.359375 -2.34375 2.359375 -2.140625 C 2.375 -2.0625 2.453125 -2.0625 2.484375 -2.0625 C 2.59375 -2.0625 2.59375 -2.109375 2.59375 -2.25 L 2.59375 -2.875 C 2.59375 -3 2.59375 -3.0625 2.5 -3.0625 C 2.46875 -3.0625 2.453125 -3.0625 2.359375 -2.984375 C 2.359375 -2.96875 2.28125 -2.90625 2.25 -2.875 C 2.03125 -3.015625 1.78125 -3.0625 1.515625 -3.0625 C 0.546875 -3.0625 0.3125 -2.546875 0.3125 -2.203125 C 0.3125 -1.984375 0.40625 -1.796875 0.5625 -1.671875 C 0.828125 -1.4375 1.09375 -1.390625 1.515625 -1.328125 C 1.859375 -1.265625 2.421875 -1.171875 2.421875 -0.703125 C 2.421875 -0.4375 2.234375 -0.125 1.578125 -0.125 C 0.90625 -0.125 0.671875 -0.5625 0.546875 -1.015625 C 0.53125 -1.109375 0.515625 -1.140625 0.421875 -1.140625 C 0.3125 -1.140625 0.3125 -1.09375 0.3125 -0.953125 L 0.3125 -0.109375 C 0.3125 0 0.3125 0.0625 0.40625 0.0625 C 0.46875 0.0625 0.59375 -0.078125 0.734375 -0.21875 C 1.03125 0.0625 1.40625 0.0625 1.578125 0.0625 C 2.46875 0.0625 2.796875 -0.40625 2.796875 -0.90625 Z M 2.796875 -0.90625 "/>
+</g>
+<g id="eqb-glyph-5-9">
+<path d="M 4.046875 0 L 4.046875 -0.25 C 3.59375 -0.25 3.53125 -0.296875 3.53125 -0.625 L 3.53125 -3.03125 L 2.46875 -2.953125 L 2.46875 -2.703125 C 2.9375 -2.703125 2.984375 -2.65625 2.984375 -2.3125 L 2.984375 -1.140625 C 2.984375 -0.546875 2.59375 -0.125 2.078125 -0.125 C 1.453125 -0.125 1.421875 -0.421875 1.421875 -0.765625 L 1.421875 -3.03125 L 0.375 -2.953125 L 0.375 -2.703125 C 0.890625 -2.703125 0.890625 -2.6875 0.890625 -2.078125 L 0.890625 -1.046875 C 0.890625 -0.5625 0.890625 0.0625 2.03125 0.0625 C 2.1875 0.0625 2.6875 0.0625 3.015625 -0.5 L 3.015625 0.0625 Z M 4.046875 0 "/>
+</g>
+<g id="eqb-glyph-5-10">
+<path d="M 1.921875 0 L 1.921875 -0.25 C 1.484375 -0.25 1.40625 -0.25 1.40625 -0.546875 L 1.40625 -4.765625 L 0.390625 -4.6875 L 0.390625 -4.4375 C 0.84375 -4.4375 0.90625 -4.390625 0.90625 -4.046875 L 0.90625 -0.546875 C 0.90625 -0.25 0.828125 -0.25 0.390625 -0.25 L 0.390625 0 C 0.390625 0 0.875 -0.03125 1.15625 -0.03125 C 1.40625 -0.03125 1.671875 -0.015625 1.921875 0 Z M 1.921875 0 "/>
+</g>
+<g id="eqb-glyph-5-11">
+<path d="M 6.15625 0 L 6.15625 -0.25 C 5.703125 -0.25 5.640625 -0.25 5.640625 -0.546875 L 5.640625 -2.078125 C 5.640625 -2.671875 5.34375 -3.03125 4.609375 -3.03125 C 4.0625 -3.03125 3.703125 -2.734375 3.515625 -2.390625 C 3.375 -2.875 3 -3.03125 2.5 -3.03125 C 1.9375 -3.03125 1.578125 -2.71875 1.390625 -2.359375 L 1.375 -2.359375 L 1.375 -3.03125 L 0.375 -2.953125 L 0.375 -2.703125 C 0.828125 -2.703125 0.890625 -2.65625 0.890625 -2.3125 L 0.890625 -0.546875 C 0.890625 -0.25 0.8125 -0.25 0.375 -0.25 L 0.375 0 C 0.375 0 0.859375 -0.03125 1.15625 -0.03125 C 1.40625 -0.03125 1.875 0 1.9375 0 L 1.9375 -0.25 C 1.5 -0.25 1.421875 -0.25 1.421875 -0.546875 L 1.421875 -1.78125 C 1.421875 -2.5 2 -2.828125 2.453125 -2.828125 C 2.921875 -2.828125 2.984375 -2.453125 2.984375 -2.109375 L 2.984375 -0.546875 C 2.984375 -0.25 2.921875 -0.25 2.46875 -0.25 L 2.46875 0 C 2.46875 0 2.96875 -0.03125 3.265625 -0.03125 C 3.515625 -0.03125 3.984375 0 4.046875 0 L 4.046875 -0.25 C 3.59375 -0.25 3.53125 -0.25 3.53125 -0.546875 L 3.53125 -1.78125 C 3.53125 -2.5 4.109375 -2.828125 4.546875 -2.828125 C 5.03125 -2.828125 5.09375 -2.453125 5.09375 -2.109375 L 5.09375 -0.546875 C 5.09375 -0.25 5.03125 -0.25 4.578125 -0.25 L 4.578125 0 C 4.578125 0 5.078125 -0.03125 5.359375 -0.03125 C 5.625 -0.03125 6.09375 0 6.15625 0 Z M 6.15625 0 "/>
+</g>
+<g id="eqb-glyph-5-12">
+<path d="M 3.734375 -0.625 L 3.734375 -1 L 3.5 -1 L 3.5 -0.625 C 3.5 -0.5625 3.5 -0.21875 3.25 -0.21875 C 2.984375 -0.21875 2.984375 -0.546875 2.984375 -0.640625 L 2.984375 -1.84375 C 2.984375 -2.203125 2.984375 -2.46875 2.671875 -2.71875 C 2.390625 -2.953125 2.0625 -3.0625 1.65625 -3.0625 C 1.015625 -3.0625 0.546875 -2.8125 0.546875 -2.390625 C 0.546875 -2.171875 0.703125 -2.0625 0.875 -2.0625 C 1.0625 -2.0625 1.203125 -2.1875 1.203125 -2.375 C 1.203125 -2.5 1.140625 -2.640625 0.953125 -2.703125 C 1.203125 -2.875 1.609375 -2.875 1.640625 -2.875 C 2.03125 -2.875 2.453125 -2.609375 2.453125 -2.03125 L 2.453125 -1.828125 C 2.078125 -1.8125 1.625 -1.796875 1.125 -1.609375 C 0.5 -1.375 0.3125 -1 0.3125 -0.6875 C 0.3125 -0.109375 1.015625 0.0625 1.515625 0.0625 C 2.0625 0.0625 2.375 -0.234375 2.53125 -0.5 C 2.546875 -0.21875 2.734375 0.03125 3.046875 0.03125 C 3.046875 0.03125 3.734375 0.03125 3.734375 -0.625 Z M 2.453125 -0.96875 C 2.453125 -0.3125 1.875 -0.125 1.5625 -0.125 C 1.21875 -0.125 0.890625 -0.359375 0.890625 -0.6875 C 0.890625 -1.0625 1.21875 -1.59375 2.453125 -1.640625 Z M 2.453125 -0.96875 "/>
+</g>
+<g id="eqb-glyph-6-0">
+<path d="M 3.234375 -4.421875 L 5.328125 -4.421875 C 5.4375 -4.421875 5.59375 -4.421875 5.59375 -4.59375 C 5.59375 -4.765625 5.4375 -4.765625 5.328125 -4.765625 L 0.796875 -4.765625 C 0.703125 -4.765625 0.53125 -4.765625 0.53125 -4.59375 C 0.53125 -4.421875 0.6875 -4.421875 0.796875 -4.421875 L 2.890625 -4.421875 L 2.890625 -0.265625 C 2.890625 -0.15625 2.890625 0 3.0625 0 C 3.234375 0 3.234375 -0.171875 3.234375 -0.265625 Z M 3.234375 -4.421875 "/>
+</g>
+</g>
+</defs>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-0-0" x="3.587961" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-1-0" x="15.780871" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-1-1" x="41.45394" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-2-0" x="45.275958" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-0-1" x="52.435895" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-2-1" x="62.227272" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-1-2" x="67.324698" y="10.756185"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-3-0" x="71.132477" y="6.713386"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-4-0" x="41.468169" y="17.31639"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M -26.980922 54.972278 L -18.622417 54.972278 " transform="matrix(0.982812, 0, 0, -0.982812, 72.392188, 70.75791)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-4-1" x="54.09043" y="17.31639"/>
+<use xlink:href="#eqb-glyph-4-2" x="58.496563" y="17.31639"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M -9.655803 54.972278 L -1.297297 54.972278 " transform="matrix(0.982812, 0, 0, -0.982812, 72.392188, 70.75791)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-4-3" x="71.118856" y="17.31639"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-0" x="28.835982" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-1" x="33.160846" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-2" x="36.217724" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-3" x="39.699548" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-4" x="44.024412" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-5" x="46.23825" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-6" x="49.720074" y="26.642366"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-6" x="55.415736" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-7" x="58.472613" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-2" x="62.797477" y="26.642366"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-1" x="68.918086" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-2" x="71.974963" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-8" x="75.456788" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-9" x="78.561643" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-10" x="82.886507" y="26.642366"/>
+<use xlink:href="#eqb-glyph-5-6" x="85.100345" y="26.642366"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-0-1" x="92.508875" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-2-2" x="118.605446" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-6-0" x="124.538106" y="6.713376"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-1-3" x="132.779185" y="10.756175"/>
+<use xlink:href="#eqb-glyph-1-4" x="135.491405" y="10.756175"/>
+<use xlink:href="#eqb-glyph-1-5" x="140.387108" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-2-3" x="147.058301" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-4-0" x="118.605446" y="16.772413"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 51.504769 55.528716 L 59.521463 55.528716 " transform="matrix(0.982812, 0, 0, -0.982812, 72.392188, 70.75791)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-4-1" x="130.888853" y="16.772423"/>
+<use xlink:href="#eqb-glyph-4-2" x="135.294987" y="16.772423"/>
+</g>
+<path fill="none" stroke-width="1.195483" stroke-linecap="butt" stroke-linejoin="miter" stroke="currentColor" stroke-opacity="1" stroke-miterlimit="10" d="M 68.488076 55.528716 L 76.500795 55.528716 " transform="matrix(0.982812, 0, 0, -0.982812, 72.392188, 70.75791)"/>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-4-3" x="147.578425" y="16.772423"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-4" x="104.476062" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-11" x="106.689899" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-4" x="113.125791" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-6" x="115.339628" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-12" x="118.396506" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-6" x="122.296423" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-2" x="125.353301" y="26.098399"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-6" x="131.473909" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-7" x="134.530786" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-2" x="138.855651" y="26.098399"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-8" x="144.97626" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-2" x="148.081115" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-12" x="151.562939" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-1" x="155.462857" y="26.098399"/>
+<use xlink:href="#eqb-glyph-5-5" x="158.519734" y="26.098399"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-5-7" x="161.795939" y="26.098399"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-1-6" x="170.465602" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-2-4" x="180.800937" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-0-2" x="186.670087" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-2-5" x="191.56581" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-0-2" x="196.434319" y="10.756175"/>
+</g>
+<g fill="currentColor" fill-opacity="1">
+<use xlink:href="#eqb-glyph-3-0" x="201.330042" y="6.713376"/>
+</g>
+</svg>
+</div>
+<p>In the example above, the search gave c5 a much bigger share of its visits than the network's prior did. Training pulls the prior that way, so the next search starts out already favouring c5. The search improves on the network, the network learns to be what the search was, and the next search starts from a better place.</p>
+</div>
+
+<figure class="loop wide" aria-label="Diagram of the AlphaZero training loop">
+<svg viewBox="0 0 900 250" role="img" aria-labelledby="loopTitle">
+  <title id="loopTitle">AlphaZero training loop: self-play with search produces visit counts and results, which train the network, whose better priors guide the next searches.</title>
+  <defs><marker id="loopArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker></defs>
+  <g class="node hl"><rect x="20" y="30" width="250" height="96" rx="14"/><text class="t1" x="145" y="66" text-anchor="middle">Self-play games</text><text class="t2" x="145" y="90" text-anchor="middle">network + search choose</text><text class="t2" x="145" y="108" text-anchor="middle">every move, for both sides</text></g>
+  <g class="node"><rect x="325" y="30" width="250" height="96" rx="14"/><text class="t1" x="450" y="66" text-anchor="middle">Training examples</text><text class="t2" x="450" y="90" text-anchor="middle">each position + the search's</text><text class="t2" x="450" y="108" text-anchor="middle">visit counts π + the result z</text></g>
+  <g class="node"><rect x="630" y="30" width="250" height="96" rx="14"/><text class="t1" x="755" y="66" text-anchor="middle">Update the network</text><text class="t2" x="755" y="90" text-anchor="middle">prior p → imitate π</text><text class="t2" x="755" y="108" text-anchor="middle">value v → predict z</text></g>
+  <path class="arr" d="M272,78 L321,78" marker-end="url(#loopArr)"/>
+  <path class="arr" d="M577,78 L626,78" marker-end="url(#loopArr)"/>
+  <path class="arr" d="M755,128 C755,215 145,215 145,130" marker-end="url(#loopArr)"/>
+  <text class="arrlab" x="450" y="232" text-anchor="middle">a better network gives the next searches better intuition</text>
+</svg>
+</figure>
+
+<!-- ================================================================ VARIETY -->
+<section id="variety" class="col">
+<h2><span class="num">07</span>Does variety make a better teacher?</h2>
+<p>Self-play always faces an opponent of exactly the learner's strength and style. A popular alternative, used by DeepMind's AlphaStar, is a <em>league</em>: a varied population of opponents, so that the learner can't overfit to any one style. I tested two versions of that idea with DQN on 6×6. Both said no, and the reasons why are the interesting part.</p>
+
+<h3>A league of weak opponents makes things worse</h3>
+<p>The first experiment mixed a league of fixed opponents (random, the heuristic bot, minimax, the classic tabular learners and the learner's own past snapshots) into DQN's self-play. Everything else was held fixed. Only the share of games played against the league changed, from zero (pure self-play) to all of them.</p>
+</section>
+
+<figure class="chart">
+  <div class="card"><img src="assets/league_mix_curve.svg" alt="Two panels: scores against held-out opponents and against league members both fall as the league share grows." loading="lazy"></div>
+  <figcaption><b>More league, less strength.</b> Final score as the share of league games grows. Left: opponents the learner never trained against, including head-to-head against pure self-play. Right: league members it did train against. Mean of three runs per mix.</figcaption>
+</figure>
+
+<div class="col">
+<p>Strength falls steadily as the league's share grows, against every held-out opponent, and, most surprisingly, even against the league bots the learner actually trained against. The training logs explain it. Most league members are beaten nearly every game from the start, and the strongest beats the learner most of the time. Games that are almost certainly won or almost certainly lost say very little about which moves made the difference. Self-play gives an evenly matched, informative game every single time. Replacing those games with lopsided ones slows learning down.</p>
+
+<h3>A population of equals changes nothing</h3>
+<p>So maybe variety helps if the opponents are evenly matched? The second experiment trained populations of 2, 4 or 8 independent DQNs that learn <em>only</em> by playing each other: always adaptive, always roughly as strong as each other, never playing a copy of themselves.</p>
+</div>
+
+<figure class="chart">
+  <div class="card"><img src="assets/coevo_ckpt.svg" alt="Learning curves for five population configurations and self-play, all lying on top of each other." loading="lazy"></div>
+  <figcaption><b>Every curve lies on the same line.</b> Strength against minimax-d3 versus training games <em>per agent</em>, for each population setup and for single-agent self-play (three runs each). The y-axis is zoomed in, so gaps of a point or two are within noise.</figcaption>
+</figure>
+
+<div class="col">
+<p>Given the same number of games per agent, a population member ends up exactly as strong as a self-play learner. Its strength depends on how many games <em>it</em> has played, not on whom it played. Split a fixed budget across a population and each member simply gets less practice, so it ends up weaker. The members also disagree with each other about moves no more than three separately trained self-play runs do, and there are no rock-paper-scissors cycles among them. A peer trained by the same recipe is just another sample of the same player.</p>
+<div class="callout"><p>Weak opponents hurt because their games teach little, not because they add variety. Variety from equals doesn't hurt, but it doesn't help either when the equals are copies of the same recipe. For a league to beat self-play, its members need to be genuinely different and close to the learner's strength, such as dedicated "exploiters" whose only job is to find the learner's weaknesses.</p></div>
+</div>
+
+<!-- ================================================================ 8x8 -->
+<section id="eight" class="col">
+<h2><span class="num">08</span>Scaling up to the real board</h2>
+<p>Everything so far ran on 6×6. The board people actually play is 8×8, so the last question was whether the recipe carries over. I first re-tuned the bots for the bigger board. The best weights turned out to be identical to the 6×6 ones, which killed my theory that the heuristic bot struggles on bigger boards because its weights were tuned for a small one. The real reason is that longer games give lookahead more chances to pay off. On 8×8, minimax-d4 beats the heuristic bot almost every game.</p>
+<p>That creates a measuring problem: once the best yardstick is beaten almost every time, it can't tell strong agents apart. So the 8×8 agent was also measured against <a href="https://github.com/abulmo/edax-reversi">Edax</a>, a free, world-class Othello engine whose search depth can be dialled from weak to formidable.</p>
+<p>The AlphaZero recipe stayed the same, with a deeper network (six residual blocks instead of four) and more search per move (150 simulations instead of 64), trained for about 100,000 self-play games over roughly two days on an 8-core CPU.</p>
+</section>
+
+<figure class="chart">
+  <div class="card"><img src="assets/s8_curve.svg" alt="8x8 learning curves against minimax-d4: with search the score jumps near the top immediately; the network alone climbs steadily past even." loading="lazy"></div>
+  <figcaption><b>The 8×8 learning curves look like the 6×6 ones.</b> Score against minimax-d4 every 5,000 self-play games, with search (solid) and as the network alone (dashed).</figcaption>
+</figure>
+
+<div class="col">
+<p>Both roles of search reappear. With search, the agent beats minimax-d4 from the very first checkpoint and approaches the top of the scale. The network alone improves steadily all the way through and ends up clearly ahead of minimax-d4 without any search at all.</p>
+</div>
+
+<figure class="chart narrow">
+  <div class="card"><img src="assets/s8_edax.svg" alt="Bar chart of the score against Edax at levels 1, 3, 5 and 8, falling as the level rises." loading="lazy"></div>
+  <figcaption><b>Where it stands against a world-class engine.</b> Score against Edax at four search levels (200 games each; whiskers: 95% confidence intervals). Edax's opening book was switched off.</figcaption>
+</figure>
+
+<div class="col">
+<p>Against Edax, the score falls steadily as Edax searches deeper: a clear win at level 3, a narrow loss at level 5. That puts the agent somewhere between those two, a respectable middle setting of an engine that is far stronger at full depth. Edax's evaluation was fitted to a large collection of expert games, and at high levels it searches much deeper than 150 network-guided simulations can.</p>
+
+<div class="aside">
+  <div class="tag">Behind the scenes</div>
+  <h4>The bug that cost two days</h4>
+  <p>The first 8×8 training run slowed down about seven-fold after around ten thousand games, for no visible reason. The culprit was weight decay: it had pushed thousands of network weights so close to zero that they became <em>denormal</em> floating-point numbers, a special range of tiny values that CPUs process more than ten times more slowly. One line to flush them to zero fixed it, and the run started over from scratch. If a long CPU training run mysteriously crawls, check for denormals.</p>
+</div>
+<p>These 8×8 results come from one training run. Two more runs with different seeds are training as I write this, to check how reproducible the strength is; if either turns out clearly stronger, it will replace the current model.</p>
+</div>
+
+<!-- ================================================================ LEVELS -->
+<section id="levels" class="col">
+<h2><span class="num">09</span>Four difficulty levels from one brain</h2>
+<p>The 8×8 model is the engine of the Othello app I'm building, which needs easy, medium, hard and master levels. Training four separate models would be wasteful and hard to keep consistent. Instead, every level uses the <em>same</em> model and the same search, and changes only how the move is picked from the search's visit counts, using a <strong>temperature</strong> <i>T</i>: each move is chosen with probability proportional to <i>N</i><sup>1/<i>T</i></sup>. At <i>T</i>&nbsp;=&nbsp;0 it always plays the most-visited move. As <i>T</i> rises, it spreads its choices over the other moves its search considered.</p>
+</section>
+
+<div class="widget" id="temp">
+  <div class="w-head">
+    <div class="w-title">Turning one player into four</div>
+    <div class="w-sub">Move probabilities for the position above, from a 200-simulation search (the app's budget).</div>
+  </div>
+  <div class="tlevel" id="tLabel"></div>
+  <input class="tslider" id="tSlider" type="range" min="0" max="6" step="1" value="0" aria-label="Move temperature">
+  <div class="tticks"><span>0</span><span>0.25</span><span>0.5</span><span>1</span><span>2</span><span>4</span><span>8</span></div>
+  <div class="mrows" id="tRows" style="margin-top:16px"></div>
+  <p class="note">Moves the search never visited (here b5 and a5) can't be picked at any temperature. That is why even the easiest level rarely blunders outright.</p>
+</div>
+
+<figure class="chart mid">
+  <div class="card"><img src="assets/s8_ladder.svg" alt="Score against random, heuristic and minimax-d4 as the move temperature increases; scores stay high until about T=1 and then fall." loading="lazy"></div>
+  <figcaption><b>Strength against temperature.</b> The same model and search, weakened only by the temperature used to pick its move, against each yardstick bot.</figcaption>
+</figure>
+
+<div class="col">
+<p>Small temperatures barely matter: the search usually piles its visits onto one move, so a gentle temperature rarely picks another. The real drop starts around <i>T</i>&nbsp;=&nbsp;1. I chose the four levels from this sweep and then verified them directly, with each level playing the one below it.</p>
+<div class="tbl-wrap">
+<table class="ref">
+  <thead><tr><th>Level</th><th>T</th><th>vs level below</th><th>vs heuristic</th><th>vs minimax-d4</th></tr></thead>
+  <tbody>
+    <tr><td class="lv">Easy</td><td>8</td><td>–</td><td>53%</td><td>6%</td></tr>
+    <tr><td class="lv">Medium</td><td>2</td><td>76%</td><td>90%</td><td>42%</td></tr>
+    <tr><td class="lv">Hard</td><td>1</td><td>86%</td><td>97%</td><td>81%</td></tr>
+    <tr><td class="lv">Master</td><td>0</td><td>86%</td><td>100%</td><td>98%</td></tr>
+  </tbody>
+</table>
+<div class="tcap">Each level against the level below (400 games) and against the 8×8 bots (100 games each), at 200 simulations per move.</div>
+</div>
+<p>Every level beats the one below it comfortably, and the levels line up with familiar opponents: Easy plays about as well as the heuristic bot, Hard beats the minimax bot, and Master is the full-strength model. Easy is not a true beginner, though, since it only ever chooses among moves its search took seriously. Making a gentler level would need a different knob, such as less search.</p>
+<p>Shipping the model meant exporting the network to a portable format (ONNX) along with a small manifest describing its inputs, search settings and levels, plus a set of test positions with the <em>exact</em> visit counts the search must produce. The app reimplements the search itself, and because search without random noise is deterministic, those counts must match to the last visit. A move takes well under a second.</p>
+<div class="callout play"><p><strong>Try it yourself.</strong> The game is online at <a href="https://palakraisinghani.github.io/O-Rolleto-PlayOthello/">palakraisinghani.github.io/O-Rolleto-PlayOthello</a>.</p></div>
+</div>
+
+<!-- ================================================================ LEARNED -->
+<section id="learned" class="col">
+<h2><span class="num">10</span>What I learned</h2>
+<ul class="arrows">
+  <li><strong>The obvious reward signal can point the wrong way.</strong> Counting discs is the beginner's mistake, and the disc-only bot proved it numerically before any learning began.</li>
+  <li><strong>Each classic method fails for its own reason</strong>: too many positions to tabulate, memorising one opponent, or a model too simple to say anything new. Knowing <em>why</em> a method stalls is more useful than knowing that it does.</li>
+  <li><strong>The best practice partner is one at your own level that keeps improving.</strong> Fixed opponents freeze, weak ones teach little, and identical peers teach nothing new. Self-play gets this right by construction.</li>
+  <li><strong>Lookahead is the dividing line.</strong> Search helps twice: when choosing a move, and as a teacher whose output the network learns to imitate.</li>
+  <li><strong>Small engineering details decide big runs.</strong> Pairing every opening with both colours, holding out evaluation opponents, and one denormal-number bug each mattered as much as the choice of algorithm.</li>
+</ul>
+
+<h3>What's next</h3>
+<p>Next up: finishing the extra 8×8 training runs, a league that samples opponents near the learner's own strength (rather than weak ones), an agent that watches a specific opponent and learns to exploit its weaknesses, and move-by-move feedback for people playing the app, flagging the moves where the model's evaluation says they gave away the most.</p>
+<div class="endmark">● ○</div>
+</section>
+</article>
+</main>
+
+<footer>
+  <div class="col">
+    <h3>Play</h3>
+    <p>The Othello game is online at <a href="https://palakraisinghani.github.io/O-Rolleto-PlayOthello/">palakraisinghani.github.io/O-Rolleto-PlayOthello</a>.</p>
+    <h3>About this project</h3>
+    <p>All the code (bitboard game engine, bots, learners and evaluation harness) is written in Python with PyTorch and runs on a CPU. It is on <a href="https://github.com/palakraisinghani/OthelloRL">GitHub</a>, along with the full technical report, which has every table, confidence interval and caveat behind this post.</p>
+    <h3>References</h3>
+    <ol>
+      <li>R. S. Sutton and A. G. Barto. <em>Reinforcement Learning: An Introduction</em>, 2nd ed. MIT Press, 2018.</li>
+      <li>V. Mnih et al. Human-level control through deep reinforcement learning. <em>Nature</em>, 2015.</li>
+      <li>H. van Hasselt, A. Guez and D. Silver. Deep reinforcement learning with double Q-learning. <em>AAAI</em>, 2016.</li>
+      <li>J. Schulman et al. Proximal policy optimization algorithms. arXiv:1707.06347, 2017.</li>
+      <li>D. Silver et al. A general reinforcement learning algorithm that masters chess, shogi, and Go through self-play. <em>Science</em>, 2018.</li>
+      <li>O. Vinyals et al. Grandmaster level in StarCraft II using multi-agent reinforcement learning. <em>Nature</em>, 2019.</li>
+      <li>M. Buro. The Othello match of the year: Takeshi Murakami vs. Logistello. <em>ICCA Journal</em>, 1997.</li>
+      <li>J. Feinstein. Amenor wins world 6×6 championships! <em>British Othello Federation Newsletter</em>, 1993.</li>
+      <li>H. Takizawa. Othello is solved. arXiv:2310.19387, 2023.</li>
+      <li>R. Delorme. Edax, an Othello engine. <a href="https://github.com/abulmo/edax-reversi">github.com/abulmo/edax-reversi</a>.</li>
+    </ol>
+    <p style="margin-top:1.4em">© 2026 Palak Raisinghani</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  // ------------------------------------------------------------------ data
+  // Positions generated by the project's game engine (scripts/make_rule_diagrams.py) and
+  // Oroletto's real search on the example position (results/az_example.json).
+  var RULES = {"a": {"board": "..............wb....bw..............", "ghosts": [8, 13, 22, 27], "illegal": [28], "toMove": "b"}, "b": {"board": "........b.....bb....bw..............", "newSq": 8, "flipped": [14], "arrows": [[8, 20]]}, "c": {"board": "...b...wwb....wb....wb....wbb.....b.", "ghosts": [13], "arrows": [[13, 3], [13, 15], [13, 27]], "toMove": "b"}, "d": {"board": "...b...wbb...bbb....bb....wbb.....b.", "newSq": 13, "flipped": [8, 14, 20]}, "e": {"board": "www....b....wbbb...bbb......b.......", "ghosts": [16, 25, 26, 35], "toMove": "w"}, "f": {"board": "wwbbbwbwbbbwbbwbbwbbbwwbbbbwbwbwwwww"}};
+  var RULE_CAPS = {
+    a: "<b>The start.</b> Two discs each. Dashed circles are Black's four legal moves; e5 (×) touches a white disc but traps nothing, so it is illegal.",
+    b: "<b>A capture.</b> Black plays c2 (red ring). The white disc on c3 is trapped against Black's c4, so it flips (orange ring).",
+    c: "<b>Several lines at once (before).</b> Black's move at b3 closes three lines; each arrow runs to the black disc anchoring the line.",
+    d: "<b>Several lines at once (after).</b> All three trapped discs flip together.",
+    e: "<b>A forced pass.</b> Black has no legal move, so White moves again (dashed: White's options).",
+    f: "<b>Game over.</b> The board is full: Black has 20 discs and White 16, so Black wins."
+  };
+  var MCTS = {
+    board: "b.....wb....bwbb...wwbb....w........",
+    rows: [
+      {mv: "a4", p: 0.665, s: {64: [35, 0.649], 800: [471, 0.789], 3200: [1060, 0.795]}},
+      {mv: "c5", p: 0.166, s: {64: [28, 0.801], 800: [299, 0.828], 3200: [2085, 0.842]}},
+      {mv: "d6", p: 0.073, s: {64: [1, 0.851], 800: [14, 0.602], 3200: [30, 0.644]}},
+      {mv: "c6", p: 0.047, s: {64: [0, null], 800: [13, 0.660], 3200: [21, 0.663]}},
+      {mv: "b5", p: 0.025, s: {64: [0, null], 800: [2, 0.290], 3200: [3, 0.114]}},
+      {mv: "a5", p: 0.024, s: {64: [0, null], 800: [1, -0.268], 3200: [1, -0.268]}}
+    ],
+    story: {
+      64: "<b>64 simulations</b> (the 6×6 self-play budget). d6 has the highest average, but from a single visit; picking the highest average would play it. The search plays a4, the most visited, even though c5 already averages higher: the network's strong first instinct for a4 hasn't been overruled yet.",
+      800: "<b>800 simulations.</b> Now that d6 has been checked more often, its average has dropped well below the two main candidates. That single early visit was a lucky estimate. c5 still averages highest, and it is closing the gap in visits.",
+      3200: "<b>3,200 simulations.</b> c5 now has about twice as many visits as a4. Given enough evidence, the search has overruled the network's first instinct, but only once that evidence was strong."
+    }
+  };
+  var TEMP_VISITS = [["a4", 131], ["c5", 60], ["d6", 5], ["c6", 4], ["b5", 0], ["a5", 0]];
+  var T_VALUES = [0, 0.25, 0.5, 1, 2, 4, 8];
+  var T_LEVELS = {0: "Master", 1: "Hard", 2: "Medium", 8: "Easy"};
+
+  // ------------------------------------------------------------------ engine
+  var DIRS = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+  var COLS = "abcdefgh";
+  function other(p) { return p === "b" ? "w" : "b"; }
+  function parse(s) { return s.split("").map(function (c) { return c === "." ? "" : c; }); }
+  function sqName(n, i) { return COLS[i % n] + (Math.floor(i / n) + 1); }
+  function sqIndex(n, name) { return (parseInt(name.slice(1), 10) - 1) * n + COLS.indexOf(name[0]); }
+  function flipsFor(b, n, sq, p) {
+    if (b[sq]) return [];
+    var o = other(p), r0 = Math.floor(sq / n), c0 = sq % n, all = [];
+    for (var k = 0; k < 8; k++) {
+      var dr = DIRS[k][0], dc = DIRS[k][1], r = r0 + dr, c = c0 + dc, run = [];
+      while (r >= 0 && r < n && c >= 0 && c < n && b[r * n + c] === o) { run.push(r * n + c); r += dr; c += dc; }
+      if (run.length && r >= 0 && r < n && c >= 0 && c < n && b[r * n + c] === p) all = all.concat(run);
+    }
+    return all;
+  }
+  function legalMoves(b, n, p) {
+    var m = [];
+    for (var i = 0; i < n * n; i++) if (!b[i] && flipsFor(b, n, i, p).length) m.push(i);
+    return m;
+  }
+  function applyMove(b, n, sq, p) {
+    var f = flipsFor(b, n, sq, p), nb = b.slice();
+    nb[sq] = p; for (var i = 0; i < f.length; i++) nb[f[i]] = p;
+    return {board: nb, flips: f};
+  }
+  function counts(b) { var x = 0, y = 0; b.forEach(function (c) { if (c === "b") x++; else if (c === "w") y++; }); return [x, y]; }
+  function rnd(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  // The report's heuristic: 50 corners + 5 mobility + 1 discs - 25 X-squares next to an empty corner.
+  function evalPos(b, n, p) {
+    var o = other(p), cor = 0, x = 0;
+    var C = [0, n - 1, n * (n - 1), n * n - 1], X = [[n + 1, 0], [2 * n - 2, n - 1], [n * (n - 2) + 1, n * (n - 1)], [n * (n - 1) - 2, n * n - 1]];
+    C.forEach(function (c) { if (b[c] === p) cor++; else if (b[c] === o) cor--; });
+    X.forEach(function (pr) { if (!b[pr[1]]) { if (b[pr[0]] === p) x++; else if (b[pr[0]] === o) x--; } });
+    var mob = legalMoves(b, n, p).length - legalMoves(b, n, o).length;
+    var ct = counts(b), disc = p === "b" ? ct[0] - ct[1] : ct[1] - ct[0];
+    return 50 * cor + 5 * mob + disc - 25 * x;
+  }
+  function bestBy(moves, score) {
+    var best = -Infinity, pick = [];
+    moves.forEach(function (m) { var v = score(m); if (v > best) { best = v; pick = [m]; } else if (v === best) pick.push(m); });
+    return rnd(pick);
+  }
+  function heuristicMove(b, n, p) {
+    var moves = legalMoves(b, n, p);
+    if (Math.random() < 0.05) return rnd(moves);
+    return bestBy(moves, function (m) { return evalPos(applyMove(b, n, m, p).board, n, p); });
+  }
+  function search(b, n, p, depth, alpha, beta, root) {
+    var moves = legalMoves(b, n, p);
+    if (!moves.length) {
+      if (!legalMoves(b, n, other(p)).length) {
+        var ct = counts(b), d = root === "b" ? ct[0] - ct[1] : ct[1] - ct[0];
+        return d > 0 ? 1e6 + d : d < 0 ? -1e6 + d : 0;
+      }
+      return search(b, n, other(p), depth, alpha, beta, root);
+    }
+    if (depth === 0) return evalPos(b, n, root);
+    var maxing = p === root, best = maxing ? -Infinity : Infinity;
+    for (var i = 0; i < moves.length; i++) {
+      var v = search(applyMove(b, n, moves[i], p).board, n, other(p), depth - 1, alpha, beta, root);
+      if (maxing) { if (v > best) best = v; if (v > alpha) alpha = v; } else { if (v < best) best = v; if (v < beta) beta = v; }
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+  function minimaxMove(b, n, p, depth) {
+    return bestBy(legalMoves(b, n, p), function (m) { return search(applyMove(b, n, m, p).board, n, other(p), depth - 1, -Infinity, Infinity, p); });
+  }
+  var BOTS = {
+    random: {name: "random bot", note: "Plays any legal move at random: the floor of the ladder.", move: function (b, n, p) { return rnd(legalMoves(b, n, p)); }},
+    heuristic: {name: "heuristic bot", note: "Looks one move ahead and scores the result with the report's tuned weights: corners 50, mobility 5, discs 1, X-squares −25.", move: heuristicMove},
+    minimax: {name: "minimax bot", note: "Searches three moves ahead with alpha-beta pruning and the same evaluation. On 6×6 it beats the heuristic bot most of the time.", move: function (b, n, p) { return minimaxMove(b, n, p, 3); }}
+  };
+
+  // ------------------------------------------------------------------ board renderer
+  var uid = 0;
+  var NS = "http://www.w3.org/2000/svg";
+  function center(n, i) { return [(i % n) * 10 + 5, Math.floor(i / n) * 10 + 5]; }
+  // opts: ghosts, ghostColor, illegal, newSq, flipped, arrows, hints, last, anim {flip:[], pop:sq}, marks {sq:{ring,color,label}}
+  function drawBoard(host, n, b, opts) {
+    opts = opts || {};
+    var id = host._bid || (host._bid = "bd" + (uid++));
+    var S = n * 10, pad = 6.5, h = [];
+    h.push('<svg class="board" viewBox="' + (-pad) + ' ' + (-pad) + ' ' + (S + pad + 1.5) + ' ' + (S + pad + 1.5) + '" role="img" aria-label="Othello board">');
+    h.push('<defs><radialGradient id="' + id + 'gb" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#6a6a6a"/><stop offset=".45" stop-color="#1c1c1c"/><stop offset="1" stop-color="#000"/></radialGradient>' +
+      '<radialGradient id="' + id + 'gw" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fff"/><stop offset=".6" stop-color="#ececec"/><stop offset="1" stop-color="#bdbdbd"/></radialGradient>' +
+      '<marker id="' + id + 'ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/></marker>' +
+      '<linearGradient id="' + id + 'felt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#358a59"/><stop offset="1" stop-color="#26703f"/></linearGradient></defs>');
+    h.push('<rect x="0" y="0" width="' + S + '" height="' + S + '" fill="url(#' + id + 'felt)"/>');
+    for (var i = 1; i < n; i++) h.push('<line x1="' + i * 10 + '" y1="0" x2="' + i * 10 + '" y2="' + S + '" stroke="#1b4d30" stroke-width=".35"/><line x1="0" y1="' + i * 10 + '" x2="' + S + '" y2="' + i * 10 + '" stroke="#1b4d30" stroke-width=".35"/>');
+    h.push('<rect x="0" y="0" width="' + S + '" height="' + S + '" fill="none" stroke="#1b4d30" stroke-width=".8"/>');
+    if (n === 8) [[2, 2], [6, 2], [2, 6], [6, 6]].forEach(function (q) { h.push('<circle cx="' + q[0] * 10 + '" cy="' + q[1] * 10 + '" r=".9" fill="#1b4d30"/>'); });
+    for (var c = 0; c < n; c++) h.push('<text class="coord" x="' + (c * 10 + 5) + '" y="-2.2" text-anchor="middle">' + COLS[c] + '</text>');
+    for (var r = 0; r < n; r++) h.push('<text class="coord" x="-3.4" y="' + (r * 10 + 6.2) + '" text-anchor="middle">' + (r + 1) + '</text>');
+    var flipSet = {}, anim = opts.anim || {};
+    (anim.flip || []).forEach(function (q) { flipSet[q] = 1; });
+    for (var q = 0; q < n * n; q++) {
+      if (!b[q]) continue;
+      var xy = center(n, q), cls = "disc" + (flipSet[q] ? " flip" : "") + (anim.pop === q ? " pop" : "");
+      h.push('<g class="' + cls + '"><circle cx="' + (xy[0] + .45) + '" cy="' + (xy[1] + .6) + '" r="4" fill="rgba(0,0,0,.35)"/>' +
+        '<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="4" fill="url(#' + id + (b[q] === "b" ? "gb" : "gw") + ')" stroke="' + (b[q] === "b" ? "#000" : "#8c8c8c") + '" stroke-width=".25"/></g>');
+    }
+    var gcol = opts.ghostColor || "#111";
+    (opts.ghosts || []).forEach(function (g) { var xy = center(n, g); h.push('<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="3.3" fill="none" stroke="' + gcol + '" stroke-width=".55" stroke-dasharray="1.2 .9"/>'); });
+    (opts.flipped || []).forEach(function (g) { var xy = center(n, g); h.push('<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="4.7" fill="none" stroke="#f08a24" stroke-width=".75"/>'); });
+    if (opts.newSq != null) { var xy0 = center(n, opts.newSq); h.push('<circle cx="' + xy0[0] + '" cy="' + xy0[1] + '" r="4.7" fill="none" stroke="#c0392b" stroke-width=".85"/>'); }
+    if (opts.last != null) { var xl = center(n, opts.last); h.push('<circle cx="' + xl[0] + '" cy="' + xl[1] + '" r="1" fill="#e74c3c"/>'); }
+    (opts.arrows || []).forEach(function (a) {
+      var p0 = center(n, a[0]), p1 = center(n, a[1]), dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.sqrt(dx * dx + dy * dy);
+      var sx = p0[0] + dx / L * 3.4, sy = p0[1] + dy / L * 3.4, ex = p1[0] - dx / L * 2, ey = p1[1] - dy / L * 2;
+      h.push('<line x1="' + sx + '" y1="' + sy + '" x2="' + ex + '" y2="' + ey + '" stroke="rgba(255,255,255,.8)" stroke-width="1.6" stroke-linecap="round"/>');
+      h.push('<line x1="' + sx + '" y1="' + sy + '" x2="' + ex + '" y2="' + ey + '" stroke="#c0392b" stroke-width=".8" marker-end="url(#' + id + 'ar)"/>');
+    });
+    (opts.illegal || []).forEach(function (g) { var xy = center(n, g); h.push('<path d="M' + (xy[0] - 2.6) + ',' + (xy[1] - 2.6) + ' L' + (xy[0] + 2.6) + ',' + (xy[1] + 2.6) + ' M' + (xy[0] - 2.6) + ',' + (xy[1] + 2.6) + ' L' + (xy[0] + 2.6) + ',' + (xy[1] - 2.6) + '" stroke="#c0392b" stroke-width="1" stroke-linecap="round"/>'); });
+    var marks = opts.marks || {};
+    Object.keys(marks).forEach(function (k) {
+      var m = marks[k], xy = center(n, +k);
+      if (m.ring) h.push('<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="4.5" fill="' + (m.fill || "none") + '" stroke="' + m.ring + '" stroke-width="' + (m.w || .8) + '"/>');
+      if (m.label) h.push('<text x="' + xy[0] + '" y="' + (xy[1] + 1.25) + '" text-anchor="middle" font-family="system-ui,sans-serif" font-size="3.4" font-weight="700" fill="' + (m.color || "#fff") + '">' + m.label + '</text>');
+    });
+    (opts.hints || []).forEach(function (g) { var xy = center(n, g); h.push('<circle class="hintdot" cx="' + xy[0] + '" cy="' + xy[1] + '" r="1.35" fill="#9ff0bd" opacity=".9"/>'); });
+    if (opts.clickable) (opts.hints || []).forEach(function (g) { h.push('<rect class="hit" data-sq="' + g + '" x="' + (g % n) * 10 + '" y="' + Math.floor(g / n) * 10 + '" width="10" height="10"><title>' + sqName(n, g) + '</title></rect>'); });
+    h.push('</svg>');
+    host.innerHTML = h.join("");
+  }
+
+  // ------------------------------------------------------------------ rules gallery + legend
+  var gal = document.getElementById("rulesGallery");
+  "abcdef".split("").forEach(function (k) {
+    var d = RULES[k], card = document.createElement("div"), fr = document.createElement("div"), cap = document.createElement("div");
+    card.className = "rule-card"; fr.className = "board-frame"; cap.className = "cap"; cap.innerHTML = RULE_CAPS[k];
+    card.appendChild(fr); card.appendChild(cap); gal.appendChild(card);
+    drawBoard(fr, 6, parse(d.board), {ghosts: d.ghosts, ghostColor: d.toMove === "w" ? "#fff" : "#111", illegal: d.illegal, newSq: d.newSq, flipped: d.flipped, arrows: d.arrows});
+  });
+  var LEG = [
+    ['<circle cx="9" cy="9" r="7" fill="#111"/>', "Black disc"],
+    ['<circle cx="9" cy="9" r="7" fill="#f2f2f2" stroke="#999"/>', "White disc"],
+    ['<circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 1.8"/>', "Legal move"],
+    ['<circle cx="9" cy="9" r="7" fill="none" stroke="#c0392b" stroke-width="2"/>', "Disc just placed"],
+    ['<circle cx="9" cy="9" r="7" fill="none" stroke="#f08a24" stroke-width="2"/>', "Disc flipped"],
+    ['<path d="M5,5 L13,13 M5,13 L13,5" stroke="#c0392b" stroke-width="2.2" stroke-linecap="round"/>', "Illegal move"]
+  ];
+  document.getElementById("rulesLegend").innerHTML = LEG.map(function (l) { return '<span><svg viewBox="0 0 18 18" aria-hidden="true">' + l[0] + '</svg>' + l[1] + '</span>'; }).join("");
+
+  // ------------------------------------------------------------------ hero autoplay
+  (function hero() {
+    var host = document.getElementById("heroBoard"), cap = document.getElementById("heroCaption"), n = 6;
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var b, p, last, timer = null, visible = true;
+    function reset() {
+      b = parse(RULES.a.board); p = "b"; last = null;
+      for (var i = 0; i < 4; i++) { var m = legalMoves(b, n, p); if (!m.length) break; var mv = rnd(m); b = applyMove(b, n, mv, p).board; p = other(p); last = mv; }
+      drawBoard(host, n, b, {last: last});
+    }
+    function step() {
+      timer = null;
+      if (!visible) return;
+      var moves = legalMoves(b, n, p);
+      if (!moves.length) {
+        if (!legalMoves(b, n, other(p)).length) { timer = setTimeout(function () { reset(); schedule(); }, 2600); return; }
+        p = other(p); schedule(); return;
+      }
+      var mv = p === "b" ? heuristicMove(b, n, p) : minimaxMove(b, n, p, 2);
+      var res = applyMove(b, n, mv, p); b = res.board; last = mv;
+      drawBoard(host, n, b, {last: mv, anim: {flip: res.flips, pop: mv}});
+      p = other(p); schedule();
+    }
+    function schedule() { if (!timer && visible) timer = setTimeout(step, 900); }
+    reset();
+    if (reduced) { cap.textContent = "A 6×6 Othello board mid-game"; document.querySelector(".hero-caption .live").style.display = "none"; return; }
+    cap.textContent = "Live: heuristic bot (black) vs minimax bot (white)";
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; if (visible) schedule(); }).observe(host);
+    }
+    schedule();
+  })();
+
+  // ------------------------------------------------------------------ playable game
+  (function game() {
+    var host = document.getElementById("playBoard"), n = 6, st = document.getElementById("playStatus");
+    var oppKey = "heuristic", human = "b", b, p, last, busy = false, over = false, gen = 0;
+    function updScore() { var c = counts(b); document.getElementById("scB").textContent = c[0]; document.getElementById("scW").textContent = c[1]; }
+    function render(anim) {
+      var mine = !over && !busy && p === human ? legalMoves(b, n, p) : [];
+      drawBoard(host, n, b, {last: last, hints: mine, clickable: true, anim: anim});
+      updScore();
+    }
+    function finish() {
+      over = true; var c = counts(b), me = human === "b" ? c[0] : c[1], them = human === "b" ? c[1] : c[0];
+      st.textContent = me > them ? "You win " + me + "–" + them + "! Try a stronger bot." : me < them ? "The " + BOTS[oppKey].name + " wins " + them + "–" + me + "." : "A draw, " + me + "–" + them + ".";
+      render();
+    }
+    function advance(anim) {
+      var mv = legalMoves(b, n, p);
+      if (!mv.length) {
+        if (!legalMoves(b, n, other(p)).length) { render(anim); return finish(); }
+        var who = p === human ? "You have" : "The bot has";
+        p = other(p); render(anim);
+        st.textContent = who + " no legal move and must pass.";
+        var g = gen; setTimeout(function () { if (g === gen) advance(); }, 1100);
+        return;
+      }
+      if (p === human) { busy = false; render(anim); st.textContent = "Your move (" + (human === "b" ? "Black" : "White") + ")"; return; }
+      busy = true; render(anim); st.textContent = "The " + BOTS[oppKey].name + " is thinking…";
+      var g2 = gen;
+      setTimeout(function () {
+        if (g2 !== gen) return;
+        var m = BOTS[oppKey].move(b, n, p), res = applyMove(b, n, m, p);
+        b = res.board; last = m; p = other(p); busy = false;
+        advance({flip: res.flips, pop: m});
+      }, 550);
+    }
+    function newGame() { gen++; b = parse(RULES.a.board); p = "b"; last = null; over = false; busy = false; advance(); }
+    host.addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target.closest(".hit") : null;
+      if (!t || busy || over || p !== human) return;
+      var sq = +t.getAttribute("data-sq");
+      if (legalMoves(b, n, p).indexOf(sq) < 0) return;
+      var res = applyMove(b, n, sq, p); b = res.board; last = sq; p = other(p);
+      advance({flip: res.flips, pop: sq});
+    });
+    document.querySelectorAll("#oppSeg button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll("#oppSeg button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+        btn.setAttribute("aria-pressed", "true"); oppKey = btn.getAttribute("data-opp");
+        document.getElementById("oppNote").textContent = BOTS[oppKey].note; newGame();
+      });
+    });
+    document.getElementById("newGame").addEventListener("click", newGame);
+    document.getElementById("swapCol").addEventListener("click", function () {
+      human = other(human); this.textContent = human === "b" ? "Play as White" : "Play as Black"; newGame();
+    });
+    document.getElementById("oppNote").textContent = BOTS[oppKey].note;
+    newGame();
+  })();
+
+  // ------------------------------------------------------------------ MCTS explorer
+  (function mcts() {
+    var host = document.getElementById("mctsBoard"), rowsEl = document.getElementById("mctsRows"), story = document.getElementById("mctsStory");
+    var n = 6, board = parse(MCTS.board), budget = 64, hover = null;
+    function render() {
+      var data = MCTS.rows.map(function (r) { return {mv: r.mv, p: r.p, N: r.s[budget][0], Q: r.s[budget][1]}; });
+      var maxN = Math.max.apply(null, data.map(function (d) { return d.N; }));
+      var qs = data.filter(function (d) { return d.Q !== null; }).map(function (d) { return d.Q; });
+      var maxQ = Math.max.apply(null, qs);
+      var html = ['<div class="mrow head"><span>Move</span><span>Visits N</span><span class="num">N</span><span class="num">Q</span><span class="num">Prior</span></div>'];
+      var marks = {};
+      data.forEach(function (d) {
+        var played = d.N === maxN, qhi = d.Q !== null && d.Q === maxQ, sq = sqIndex(n, d.mv);
+        html.push('<div class="mrow' + (played ? " played" : "") + '" data-mv="' + d.mv + '"><span class="mv">' + d.mv + '</span>' +
+          '<span class="track"><span class="fill" style="width:' + (maxN ? (100 * d.N / maxN).toFixed(1) : 0) + '%"></span></span>' +
+          '<span class="num">' + d.N.toLocaleString() + '</span><span class="num' + (qhi ? " qhi" : "") + '">' + (d.Q === null ? "–" : (d.Q > 0 ? "+" : "") + d.Q.toFixed(2)) + '</span>' +
+          '<span class="num">' + d.p.toFixed(2) + '</span></div>');
+        var m = {label: d.mv, color: "#eafff1"};
+        if (played) { m.ring = "#7CFFB2"; m.w = 1.1; m.fill = "rgba(124,255,178,.18)"; }
+        else if (qhi) { m.ring = "#f5b041"; m.w = 1.1; m.fill = "rgba(245,176,65,.18)"; }
+        else if (hover === d.mv) { m.ring = "#ffffff"; m.w = .7; }
+        else { m.ring = "rgba(255,255,255,.35)"; m.w = .5; }
+        if (hover === d.mv) { m.w = 1.5; }
+        marks[sq] = m;
+      });
+      rowsEl.innerHTML = html.join("");
+      drawBoard(host, n, board, {marks: marks});
+      story.innerHTML = MCTS.story[budget];
+    }
+    rowsEl.addEventListener("mouseover", function (e) { var r = e.target.closest(".mrow"); var mv = r && r.getAttribute("data-mv"); if (mv !== hover) { hover = mv; render(); } });
+    rowsEl.addEventListener("mouseleave", function () { hover = null; render(); });
+    document.querySelectorAll("#budgetSeg button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll("#budgetSeg button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+        btn.setAttribute("aria-pressed", "true"); budget = +btn.getAttribute("data-b"); render();
+      });
+    });
+    render();
+  })();
+
+  // ------------------------------------------------------------------ temperature
+  (function temp() {
+    var sl = document.getElementById("tSlider"), rows = document.getElementById("tRows"), lab = document.getElementById("tLabel");
+    function render() {
+      var T = T_VALUES[+sl.value], w;
+      if (T === 0) { var mx = Math.max.apply(null, TEMP_VISITS.map(function (v) { return v[1]; })); w = TEMP_VISITS.map(function (v) { return v[1] === mx ? 1 : 0; }); }
+      else w = TEMP_VISITS.map(function (v) { return v[1] > 0 ? Math.pow(v[1], 1 / T) : 0; });
+      var s = w.reduce(function (a, c) { return a + c; }, 0), pr = w.map(function (x) { return x / s; }), mp = Math.max.apply(null, pr);
+      var lv = T_LEVELS[T];
+      lab.innerHTML = "T = " + T + (lv ? '<span class="lv">' + lv + ' level</span>' : '<span class="lv none">between levels</span>');
+      rows.innerHTML = '<div class="mrow head" style="grid-template-columns:2.6em 1fr 4.2em 5.4em"><span>Move</span><span>Chance of being played</span><span class="num">Visits</span><span class="num">Chance</span></div>' +
+        TEMP_VISITS.map(function (v, i) {
+          return '<div class="mrow" style="grid-template-columns:2.6em 1fr 4.2em 5.4em"><span class="mv">' + v[0] + '</span><span class="track"><span class="fill" style="width:' + (100 * pr[i] / mp).toFixed(1) + '%"></span></span>' +
+            '<span class="num">' + v[1] + '</span><span class="num">' + (100 * pr[i]).toFixed(pr[i] > 0 && pr[i] < 0.01 ? 1 : 0) + '%</span></div>';
+        }).join("");
+    }
+    sl.addEventListener("input", render);
+    render();
+  })();
+
+  // ------------------------------------------------------------------ chrome: progress bar + theme
+  var bar = document.getElementById("progress");
+  function prog() { var h = document.documentElement, max = h.scrollHeight - h.clientHeight; bar.style.width = (max > 0 ? 100 * h.scrollTop / max : 0) + "%"; }
+  document.addEventListener("scroll", prog, {passive: true}); prog();
+  document.getElementById("themeToggle").addEventListener("click", function () {
+    var root = document.documentElement, cur = root.getAttribute("data-theme");
+    var dark = cur ? cur === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark"; root.setAttribute("data-theme", next);
+    try { localStorage.setItem("oth-theme", next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
