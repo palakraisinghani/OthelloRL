@@ -760,38 +760,37 @@ same DQN against weaker and stronger fixed opponents, and against itself.}
 \label{sec:selfplay}
 
 Every method in \S\ref{sec:classical} learned by playing the heuristic bot, so
-it could at best learn to beat \emph{that} bot. In \emph{self-play} the learner
+it could at best learn to beat \emph{that} bot. If the method being trained is capable of learning a more complex policy than the bot it is being trained against then playing and learning ability is capped by the bot being played against. This is demonstrated via self-play. In \emph{self-play} the learner
 plays against itself, or against frozen copies of its earlier selves. The
 opponent therefore improves as the learner does, and no hand-written opponent
-is needed during training. This section first shows why a fixed opponent limits
+is needed during training.
+
+This section first shows why a fixed opponent limits
 learning (\S\ref{sec:frozen}), then compares three self-play methods on
 \bx{6}. The evaluation is unchanged: the same three rule-based bots, openings
 and protocol as before. The heuristic bot is now used \emph{only} for
 evaluation and is never trained against. The strongest agent becomes the
 project's final model, \textit{Oroletto}.
 
-\glance{\textbf{Question:} can an agent learn Othello by playing itself, and which
-self-play method is strongest? \textbf{Answer:} yes. A fixed opponent freezes the
-learning target (\S\ref{sec:frozen}). Self-play without search (DQN+, PPO)
-matches the best fixed-opponent learner without ever meeting it. Self-play
-\emph{with} search (AlphaZero) beats every other agent, including minimax-d4
-about three times out of four, and becomes Oroletto.}
-
-\subsection{Why self-play? The frozen target of a fixed opponent}
+\subsection{Why self-play? The limited sky with a fixed opponent}
 \label{sec:frozen}
 
-The \emph{Point to Ponder} in \S\ref{sec:classical} asked whether DQN is held
-back by its fixed training opponent. Before turning to self-play methods, we
-test this directly.
+The ask whether DQN is held
+back by its fixed training opponent.
 
 \paragraph{Design.} We train three Double DQNs that are identical to the
 self-play DQN used later in this report (same network, replay buffer,
 exploration schedule and budget). The only difference is their training
 opponent: the random bot, the heuristic bot, or minimax at depth~3, one fixed
 opponent each for the whole run. We compare them with two references trained
-under the same conditions: the \emph{self-play} DQN, whose opponent is its own
-live copy (\S\ref{sec:league}, $p=0$), and the classical (vanilla) DQN of
-\S\ref{sec:classical}, which was also trained only against the heuristic bot. Every learner gets
+under the same conditions: 
+\begin{itemize}
+\item The \emph{self-play} DQN, whose opponent is its own
+live copy (\S\ref{sec:league}, $p=0$)
+\item The classical (vanilla) DQN of
+\S\ref{sec:classical}, which was also trained only against the heuristic bot
+\end{itemize}
+ Every learner gets
 \TrainGames{} games and 3 seeds.
 
 The learners are compared in three ways:
